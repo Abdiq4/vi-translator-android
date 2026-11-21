@@ -1,4 +1,4 @@
 # The shared core (vi-translator-ffi) the app is built with: a commit (or branch) of
 # https://github.com/vi-translator/vi-translator-desktop, as the chiaki-ng submodule is pinned.
 # CI checks it out and native/build.sh builds it (VIT_CORE_DIR).
-main
+6a08b2d3b044785db50bd48d1cf4f19816de690f
