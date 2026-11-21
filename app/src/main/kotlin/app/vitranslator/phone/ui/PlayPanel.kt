@@ -63,7 +63,7 @@ class PlayPanel(h: Host) : Panel(h) {
 
         // ---- the picture
         stageMsg = k.column().apply { gravity = Gravity.CENTER }
-        stats = k.text("", k.base - 3f, Color.WHITE, k.bold).apply {
+        stats = k.text("", k.base - 2f, Color.WHITE, k.bold).apply {
             setShadowLayer(4f, 0f, 1f, Color.BLACK)
             setPadding(k.dp(8), k.dp(6), k.dp(8), k.dp(6))
         }
@@ -241,7 +241,7 @@ class PlayPanel(h: Host) : Panel(h) {
     }
 
     private fun lineView(l: Line, rtl: Boolean) = k.column(
-        k.text(l.original, k.base - 2f, k.muted).apply { textDirection = View.TEXT_DIRECTION_LTR },
+        k.text(l.original, k.base - 1f, k.muted).apply { textDirection = View.TEXT_DIRECTION_LTR },
         k.text(l.translated.ifEmpty { "…" }, k.base + 2.5f, k.text, if (rtl) k.font("Tajawal-Bold.ttf") else k.bold).apply {
             textDirection = if (rtl) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_LTR
         },

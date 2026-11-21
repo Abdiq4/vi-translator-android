@@ -150,7 +150,7 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
             background = k.round(Color.TRANSPARENT, 10)
             layoutParams = LinearLayout.LayoutParams(k.dp(36), k.dp(36))
         }
-        val version = k.text("v" + Updater.current(this), k.base - 3.5f, k.muted, k.bold).apply { textDirection = View.TEXT_DIRECTION_LTR }
+        val version = k.text("v" + Updater.current(this), k.base - 2.5f, k.muted, k.bold).apply { textDirection = View.TEXT_DIRECTION_LTR }
         val brand = k.column(k.text("VI Translator", k.base + 1.5f, k.text, k.heavy), version)
         savedLabel = k.text("", k.base - 2.5f, k.muted)
         val globe = k.iconButton(R.drawable.ic_globe, T("App language")) { pickLanguage() }
@@ -171,13 +171,13 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
             background = k.round(k.muted, 999)
             layoutParams = LinearLayout.LayoutParams(k.dp(7), k.dp(7))
         }
-        status = k.text(T("Starting…"), k.base - 1.5f, k.muted, k.bold).apply {
+        status = k.text(T("Starting…"), k.base - 1f, k.muted, k.bold).apply {
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         }
         val pill = k.row(statusDot, k.grow(status), gap = 7).apply {
             background = k.round(k.panel2, 999, k.line)
-            setPadding(k.dp(12), k.dp(7), k.dp(14), k.dp(7))
+            setPadding(k.dp(14), k.dp(12), k.dp(14), k.dp(12))
         }
         val second = k.row(modes, k.grow(pill), gap = 10)
 
@@ -208,9 +208,10 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
         return k.column(box, horizon)
     }
 
-    private fun modeButton(label: String, icon: Int, click: () -> Unit) = k.text(label, k.base - 0.5f, k.muted, k.bold).apply {
+    private fun modeButton(label: String, icon: Int, click: () -> Unit) = k.text(label, k.base, k.muted, k.bold).apply {
         gravity = Gravity.CENTER
-        setPadding(k.dp(14), k.dp(7), k.dp(16), k.dp(7))
+        minHeight = k.dp(40)
+        setPadding(k.dp(16), k.dp(8), k.dp(18), k.dp(8))
         compoundDrawablePadding = k.dp(6)
         tag = icon
         setOnClickListener { click() }
@@ -218,7 +219,7 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
 
     private fun chip(label: String, on: Boolean, changed: (Boolean) -> Unit) = k.switch(label, on, small = true, changed = changed).apply {
         background = k.round(k.panel2, 999, k.line)
-        setPadding(k.dp(13), k.dp(5), k.dp(8), k.dp(5))
+        setPadding(k.dp(14), k.dp(2), k.dp(9), k.dp(2))
     }
 
     private fun setMode(m: String) {
@@ -268,12 +269,12 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
         for ((id, label, icon) in tabList) {
             val on = id == tab
             val lock = (id == "areas" || id == "pages") && cfg.locked()
-            val t = k.text(T(label) + if (lock) " 🔒" else "", k.base - 3f, if (on) k.accentUi else k.muted, k.bold).apply {
+            val t = k.text(T(label) + if (lock) " 🔒" else "", k.base - 2f, if (on) k.accentUi else k.muted, k.bold).apply {
                 gravity = Gravity.CENTER
-                setCompoundDrawablesRelativeWithIntrinsicBounds(null, k.tinted(icon, if (on) k.accentUi else k.muted, 20), null, null)
-                compoundDrawablePadding = k.dp(3)
-                setPadding(k.dp(10), k.dp(8), k.dp(10), k.dp(8))
-                minWidth = k.dp(66)
+                setCompoundDrawablesRelativeWithIntrinsicBounds(null, k.tinted(icon, if (on) k.accentUi else k.muted, 22), null, null)
+                compoundDrawablePadding = k.dp(4)
+                setPadding(k.dp(12), k.dp(9), k.dp(12), k.dp(9))
+                minWidth = k.dp(72)
                 background = if (on) k.round(k.accentSoft, 10) else null
                 setOnClickListener {
                     if (tab != id) {

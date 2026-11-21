@@ -71,6 +71,9 @@ class Kit(val ctx: Context, val dark: Boolean) {
     val heavy: Typeface = if (arabicUi) font("Tajawal-ExtraBold.ttf") else Typeface.create("sans-serif-black", Typeface.NORMAL)
     val base = if (arabicUi) 15f else 14f
 
+    /** the smallest touch target (Android's guideline) */
+    val touch = 48
+
     fun font(file: String): Typeface = cache.getOrPut(file) {
         try {
             Typeface.createFromAsset(ctx.assets, "fonts/$file")
@@ -142,18 +145,18 @@ class Kit(val ctx: Context, val dark: Boolean) {
     /** a section title (h3) */
     fun h3(s: String) = text(s, base + 2f, text, bold).apply { setPadding(0, dp(18), 0, dp(6)) }
 
-    fun muted(s: CharSequence, small: Boolean = false) = text(s, if (small) base - 1.5f else base - 0.5f, muted)
+    fun muted(s: CharSequence, small: Boolean = false) = text(s, if (small) base - 1f else base - 0.5f, muted)
 
     /** the desktop's small uppercase label (glance cards, sub-headings) */
-    fun label(s: String) = text(s.uppercase(), base - 3.5f, muted, bold).apply { letterSpacing = 0.06f }
+    fun label(s: String) = text(s.uppercase(), base - 2.5f, muted, bold).apply { letterSpacing = 0.06f }
 
-    fun badge(s: String, on: Boolean = false) = text(s, base - 3f, if (on) Color.WHITE else muted, bold).apply {
+    fun badge(s: String, on: Boolean = false) = text(s, base - 2.5f, if (on) Color.WHITE else muted, bold).apply {
         background = if (on) sunset(999) else round(panel2, 999)
-        setPadding(dp(8), dp(2), dp(8), dp(2))
+        setPadding(dp(9), dp(3), dp(9), dp(3))
     }
 
     /** a note box (.callout) */
-    fun callout(s: CharSequence = "", tone: Int? = null) = text(s, base - 1f, tone ?: text).apply {
+    fun callout(s: CharSequence = "", tone: Int? = null) = text(s, base - 0.5f, tone ?: text).apply {
         background = round(panel2, 9)
         setPadding(dp(12), dp(10), dp(12), dp(10))
     }
@@ -161,11 +164,11 @@ class Kit(val ctx: Context, val dark: Boolean) {
     // ---- buttons
     fun button(s: String, primary: Boolean = false, danger: Boolean = false, icon: Int = 0, click: () -> Unit) = TextView(ctx).apply {
         text = s
-        textSize = base - 0.5f
+        textSize = base
         typeface = bold
         gravity = Gravity.CENTER
-        minHeight = dp(42)
-        setPadding(dp(16), dp(8), dp(16), dp(8))
+        minHeight = dp(touch)
+        setPadding(dp(18), dp(10), dp(18), dp(10))
         setTextColor(if (primary) Color.WHITE else if (danger) err else this@Kit.text)
         background = if (primary) sunset(9) else round(panel2, 9, line)
         if (icon != 0) {
@@ -178,18 +181,20 @@ class Kit(val ctx: Context, val dark: Boolean) {
         pressFeedback(this)
     }
 
-    fun link(s: String, click: () -> Unit) = text(s, base - 0.5f, accentUi, bold).apply {
-        setPadding(dp(6), dp(8), dp(6), dp(8))
+    fun link(s: String, click: () -> Unit) = text(s, base, accentUi, bold).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        minHeight = dp(touch)
+        setPadding(dp(8), dp(10), dp(8), dp(10))
         isClickable = true
         setOnClickListener { click() }
     }
 
     fun iconButton(icon: Int, desc: String, click: () -> Unit) = ImageView(ctx).apply {
-        setImageDrawable(tinted(icon, muted, 18))
+        setImageDrawable(tinted(icon, muted, 21))
         scaleType = ImageView.ScaleType.CENTER
         background = round(panel2, 999)
         contentDescription = desc
-        layoutParams = LinearLayout.LayoutParams(dp(38), dp(38))
+        layoutParams = LinearLayout.LayoutParams(dp(touch), dp(touch))
         setOnClickListener { click() }
         pressFeedback(this)
     }
@@ -224,7 +229,7 @@ class Kit(val ctx: Context, val dark: Boolean) {
 
     // ---- fields
     fun field(label: String, input: View, help: String? = null) = column(
-        text(label, base - 1.5f, muted, bold).apply { setPadding(0, dp(10), 0, dp(5)) },
+        text(label, base - 1f, muted, bold).apply { setPadding(0, dp(12), 0, dp(6)) },
         input,
     ).also { if (help != null) it.addView(muted(help, true).apply { setPadding(0, dp(4), 0, 0) }) }
 
@@ -237,7 +242,8 @@ class Kit(val ctx: Context, val dark: Boolean) {
             setTextColor(this@Kit.text)
             setHintTextColor(muted)
             background = round(panel2, 9, line)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            minHeight = dp(touch)
             isSingleLine = true
             inputType = when {
                 password -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -263,7 +269,9 @@ class Kit(val ctx: Context, val dark: Boolean) {
             textSize = base
             setTextColor(this@Kit.text)
             background = round(panel2, 9, line)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            minHeight = dp(touch)
+            gravity = Gravity.CENTER_VERTICAL
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
             textAlignment = View.TEXT_ALIGNMENT_VIEW_START
@@ -298,7 +306,8 @@ class Kit(val ctx: Context, val dark: Boolean) {
                 grow(text(label, base, if (v == current) accentUi else text, if (v == current) bold else (fontOf?.invoke(v) ?: regular))),
                 icon(app.vitranslator.phone.R.drawable.ic_check, if (v == current) accentUi else Color.TRANSPARENT, 18),
             ).apply {
-                setPadding(dp(18), dp(12), dp(18), dp(12))
+                setPadding(dp(18), dp(14), dp(18), dp(14))
+                minimumHeight = dp(touch + 4)
                 setOnClickListener {
                     d.dismiss()
                     if (v != current) picked(v)
@@ -345,6 +354,8 @@ class Kit(val ctx: Context, val dark: Boolean) {
         val v = text(fmt(value), base - 1f, muted, bold).apply { minWidth = dp(48); gravity = Gravity.END }
         val sb = SeekBar(ctx).apply {
             this.max = steps
+            minimumHeight = dp(touch)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             progress = ((value - min) / step).toInt().coerceIn(0, steps)
             progressTintList = ColorStateList.valueOf(pink)
             thumbTintList = ColorStateList.valueOf(pink)
@@ -374,7 +385,7 @@ class Kit(val ctx: Context, val dark: Boolean) {
 
     /** A colour swatch that cycles through a palette on tap (the desktop's colour inputs). */
     fun colorPick(value: String, changed: (String) -> Unit): View {
-        val sw = View(ctx)
+        val sw = View(ctx).apply { minimumHeight = dp(touch) }
         val label = text(value, base - 1f, muted)
         fun paint(c: String) {
             sw.background = round(parse(c), 8, line)
@@ -383,7 +394,8 @@ class Kit(val ctx: Context, val dark: Boolean) {
         paint(value)
         val presets = listOf("#ffffff", "#ffd25a", "#3ef0d8", "#ff5aa5", "#ff9a4a", "#000000", "#1a1400", "#20182b")
         val row = row(sw, label)
-        sw.layoutParams = LinearLayout.LayoutParams(dp(34), dp(34))
+        sw.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40))
+        row.minimumHeight = dp(touch)
         row.setOnClickListener {
             pick(T("Colour"), presets.map { it to it } + listOf("custom" to T("Custom…")), label.text.toString()) { c ->
                 if (c == "custom") {
@@ -453,10 +465,11 @@ class SwitchRow(private val k: Kit, label: String, on: Boolean, small: Boolean, 
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        val t = k.text(label, if (small) k.base - 1.5f else k.base, k.text, if (small) k.bold else k.regular)
+        val t = k.text(label, if (small) k.base - 1f else k.base, k.text, if (small) k.bold else k.regular)
         addView(t, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-        addView(track, LayoutParams(k.dp(38), k.dp(22)).apply { marginStart = k.dp(10) })
-        setPadding(0, k.dp(if (small) 4 else 9), 0, k.dp(if (small) 4 else 9))
+        addView(track, LayoutParams(k.dp(44), k.dp(26)).apply { marginStart = k.dp(10) })
+        setPadding(0, k.dp(if (small) 6 else 11), 0, k.dp(if (small) 6 else 11))
+        minimumHeight = k.dp(if (small) 44 else k.touch)
         isClickable = true
         setOnClickListener {
             if (!isEnabled) return@setOnClickListener
