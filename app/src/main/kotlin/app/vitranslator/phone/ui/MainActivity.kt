@@ -463,6 +463,7 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
             app.vitranslator.phone.ps.Ps5.save(this, app.vitranslator.phone.ps.PsConsole(host, "fake PS5", ByteArray(6), "0123abcd".toByteArray() + ByteArray(8), ByteArray(16)))
             panel?.refresh()
         }
+        if (i?.hasExtra("ps5_steps") == true) Ps5Link.showSteps = i.getBooleanExtra("ps5_steps", false)
         i?.getStringExtra("mode")?.let { setMode(it) }
         i?.getStringExtra("tab")?.let { go(it) }
     }

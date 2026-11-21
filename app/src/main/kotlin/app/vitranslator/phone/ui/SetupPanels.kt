@@ -25,13 +25,7 @@ import org.json.JSONObject
  * account ID, the PIN it shows) or an Xbox (Microsoft's web player). Then the desktop's Timing.
  */
 class SourcePanel(h: Host) : Panel(h) {
-    private var discovery: DiscoveryService? = null
-    private var regist: Regist? = null
-    private val found = k.column()
-    private var host: android.widget.EditText? = null
-    private var account: android.widget.EditText? = null
-    private var pin: android.widget.EditText? = null
-    private var psStatus: android.widget.TextView? = null
+    private val ps5 = Ps5Link(h) { refresh() }
 
     override fun refresh() {
         view.removeAllViews()
@@ -67,47 +61,7 @@ class SourcePanel(h: Host) : Panel(h) {
     }
 
     private fun ps5Setup() {
-        val saved = Ps5.saved(h.act)
-        val st = k.callout(
-            when {
-                !Chiaki.available -> T("PS Remote Play isn't in this build of the app.")
-                saved != null -> T("Linked to {name} ({address})", "name" to saved.nickname.ifEmpty { "PS5" }, "address" to saved.host)
-                else -> T("Not linked to a PS5 yet.")
-            },
-            if (saved != null) k.ok else null,
-        ).apply { layoutParams = lp(12) }
-        psStatus = st
-        add(st)
-        if (saved != null) add(k.link(T("Unlink this PS5")) {
-            k.ask(T("Unlink {name}? To use it again, link it with a new PIN.", "name" to saved.nickname.ifEmpty { "PS5" }), T("Unlink")) {
-                Ps5.save(h.act, null)
-                refresh()
-            }
-        })
-        add(k.muted(T("Set it up once: on the PS5, Settings › System › Remote Play › Link Device shows a PIN."), small = true).apply { setPadding(0, k.dp(8), 0, 0) })
-        add(k.button(T("Find the PS5"), icon = R.drawable.ic_refresh) { startDiscovery() }.apply { layoutParams = lp(10) })
-        found.removeAllViews()
-        add(found)
-        // (the address typed is kept, linked or not)
-        host = k.input(saved?.host ?: h.act.getSharedPreferences("ps5", android.content.Context.MODE_PRIVATE).getString("address", "") ?: "", "192.168.1.20", ltr = true) {
-            h.act.getSharedPreferences("ps5", android.content.Context.MODE_PRIVATE).edit().putString("address", it.trim()).apply()
-        }
-        add(k.field(T("PS5 address"), host!!))
-        add(k.callout(T("Sign in with a second PSN account, not the one you play with: Remote Play signs it in on the PS5. Only its account ID is kept."), k.warn).apply { layoutParams = lp(12) })
-        add(k.button(T("Sign in to PSN")) {
-            @Suppress("DEPRECATION")
-            h.act.startActivityForResult(Intent(h.act, PsnLoginActivity::class.java), REQ_PSN)
-        }.apply { layoutParams = lp(10) })
-        add(k.link(T("Signed in with a browser? Paste the address it ended on")) { pasteAddress() })
-        // (kept as typed, or cleared: not only when linking)
-        account = k.input(Ps5.accountId(h.act), "", ltr = true) { Ps5.saveAccountId(h.act, it.trim()) }
-        add(k.field(T("PSN account ID"), account!!))
-        pin = k.input("", "12345678", number = true, ltr = true) {}
-        add(k.field(T("The 8-digit PIN the PS5 shows"), pin!!))
-        add(k.row(k.grow(k.button(T("Link"), primary = true) { register() }), k.grow(k.button(T("Wake the PS5")) { saved?.let { if (Chiaki.available) Ps5.wakeup(it) } })).apply { layoutParams = lp(12) })
-        val prefs = Prefs(h.act)
-        add(k.field(T("Stream quality"), k.select(listOf("1080" to "1080p", "720" to "720p"), prefs.psResolution.toString()) { prefs.psResolution = it.toInt() },
-            T("1080p reads small text best; 720p for a slower home network.")))
+        ps5.build(view)
     }
 
     /**
@@ -153,125 +107,8 @@ class SourcePanel(h: Host) : Panel(h) {
 
     private var lastSigned: Boolean? = null
 
-    /**
-     * Sony's sign-in in a browser instead of in the app (its bot check sometimes refuses the app's):
-     * the browser ends on remoteplay.dl.playstation.net/remoteplay/redirect?code=…; that address
-     * pasted here gives the account ID (the code is used once, within a few minutes).
-     */
-    private fun pasteAddress() {
-        val e = k.input("", "https://remoteplay.dl.playstation.net/remoteplay/redirect?code=…", ltr = true) {}
-        val msg = k.muted("", small = true)
-        val link = app.vitranslator.phone.ps.Psn.loginUrl
-        var d: android.app.Dialog? = null
-        d = k.dialog(k.card(18,
-            k.text(T("Sign in with a browser"), k.base + 0.5f, k.text, k.bold),
-            k.muted(T("1. Open Sony's sign-in in a browser (on this phone or a PC) and sign in with your second PSN account."), small = true).apply { setPadding(0, k.dp(8), 0, 0) },
-            k.row(
-                k.grow(k.button(T("Open in the browser")) {
-                    try {
-                        h.act.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link)))
-                    } catch (ex: Exception) {
-                        msg.text = ex.message
-                    }
-                }),
-                k.grow(k.button(T("Copy the link")) {
-                    val cm = h.act.getSystemService(android.content.ClipboardManager::class.java)
-                    cm.setPrimaryClip(android.content.ClipData.newPlainText("PSN", link))
-                    msg.text = T("Copied.")
-                }),
-            ).apply { setPadding(0, k.dp(8), 0, 0) },
-            k.muted(T("2. It ends on a page whose address starts with https://remoteplay.dl.playstation.net (the page itself may be blank). Copy that address and paste it here:"), small = true).apply { setPadding(0, k.dp(12), 0, k.dp(6)) },
-            e, msg, k.gap(10),
-            k.button(T("Get the account ID"), primary = true) {
-                val text = e.text.toString().trim()
-                val code = Regex("[?&]code=([^&#\\s]+)").find(text)?.groupValues?.get(1)
-                if (code == null) {
-                    msg.text = T("That address has no sign-in code: copy the whole address of the page you ended on.")
-                    return@button
-                }
-                msg.text = T("Getting the account ID…")
-                h.io {
-                    val r = try {
-                        app.vitranslator.phone.ps.Psn.accountId(android.net.Uri.decode(code)) to null
-                    } catch (ex: Exception) {
-                        null to (ex.message ?: ex.toString())
-                    }
-                    h.ui {
-                        val id = r.first
-                        if (id != null) {
-                            Ps5.saveAccountId(h.act, id)
-                            account?.setText(id)
-                            d?.dismiss()
-                        } else {
-                            msg.text = T("PSN sign-in didn't work: {e}", "e" to (r.second ?: "")) + "\n" + T("The code works once and only for a few minutes: sign in again and paste the new address.")
-                        }
-                    }
-                }
-            },
-        ))
-        d.show()
-    }
-
-    private fun startDiscovery() {
-        if (!Chiaki.available) return
-        stopDiscovery()
-        found.removeAllViews()
-        found.addView(k.muted(T("Searching…"), small = true).apply { setPadding(0, k.dp(8), 0, 0) })
-        discovery = Ps5.discover { hosts -> h.ui { showPs(hosts) } }
-        view.postDelayed({ stopDiscovery() }, 15000)
-    }
-
-    private fun stopDiscovery() {
-        discovery?.dispose()
-        discovery = null
-    }
-
-    private fun showPs(hosts: List<DiscoveryHost>) {
-        found.removeAllViews()
-        for (x in hosts) {
-            val addr = x.hostAddr ?: continue
-            val state = T(if (x.state == DiscoveryHost.State.STANDBY) "rest mode" else "on")
-            found.addView(k.button("${x.hostName ?: "PS5"} · $addr · $state") { host?.setText(addr) }.apply { layoutParams = lp(8) })
-        }
-    }
-
-    private fun register() {
-        if (!Chiaki.available) return
-        val addr = host?.text.toString().trim()
-        val acc = account?.text.toString().trim()
-        val p = pin?.text.toString().trim()
-        if (addr.isEmpty() || acc.isEmpty() || !Regex("\\d{8}").matches(p)) {
-            psStatus?.text = T("Fill in the PS5's address, the account ID and the 8-digit PIN.")
-            android.widget.Toast.makeText(h.act, psStatus?.text, android.widget.Toast.LENGTH_LONG).show()
-            return
-        }
-        Ps5.saveAccountId(h.act, acc)
-        psStatus?.text = T("Linking…")
-        regist?.dispose()
-        regist = Ps5.register(addr, acc, p.toInt(), { line -> android.util.Log.i("Regist", line) }) { console ->
-            h.ui {
-                if (console != null) {
-                    Ps5.save(h.act, console)
-                    refresh()
-                } else {
-                    psStatus?.text = T("The PS5 refused: check the PIN (it changes every few minutes) and that Remote Play is on.")
-                    android.widget.Toast.makeText(h.act, psStatus?.text, android.widget.Toast.LENGTH_LONG).show()
-                    psStatus?.setTextColor(k.err)
-                }
-            }
-        }
-    }
-
     override fun result(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode != REQ_PSN) return
-        val id = data?.getStringExtra(PsnLoginActivity.EXTRA_ACCOUNT_ID)
-        if (resultCode == android.app.Activity.RESULT_OK && id != null) {
-            Ps5.saveAccountId(h.act, id)
-            account?.setText(id)
-        } else data?.getStringExtra(PsnLoginActivity.EXTRA_ERROR)?.let {
-            psStatus?.text = T("PSN sign-in didn't work: {e}", "e" to it)
-            psStatus?.setTextColor(k.err)
-        }
+        ps5.result(requestCode, resultCode, data)
     }
 
     /** The desktop's Timing form: what is read how often, and how long text must settle. */
@@ -308,13 +145,9 @@ class SourcePanel(h: Host) : Panel(h) {
     }
 
     override fun close() {
-        stopDiscovery()
-        regist?.dispose()
+        ps5.close()
     }
 
-    companion object {
-        const val REQ_PSN = 11
-    }
 }
 
 // ------------------------------------------------------------------------------------- Show on
