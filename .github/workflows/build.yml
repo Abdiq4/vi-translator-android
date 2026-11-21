@@ -1,0 +1,58 @@
+# Every push and pull request: the native libraries (chiaki-ng), the unit tests and a debug APK.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Tools for chiaki-ng
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build protobuf-compiler python3-protobuf
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: The chiaki-ng commit
+        id: chiaki
+        run: echo "sha=$(git -C third-party/chiaki-ng rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Native libraries (cached by their sources)
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: native/out
+          key: native-${{ steps.chiaki.outputs.sha }}-${{ hashFiles('native/CMakeLists.txt', 'native/build.sh', 'native/jni/**', 'native/cmake/**') }}
+
+      - name: Build the native libraries
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        run: native/build.sh
+
+      - name: Tests and the debug APK
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug -PrequireNative
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vi-translator-android-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

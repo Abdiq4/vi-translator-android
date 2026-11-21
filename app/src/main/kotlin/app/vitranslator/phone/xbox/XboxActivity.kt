@@ -8,14 +8,17 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.PixelCopy
 import android.view.View
 import android.view.WindowManager
 import android.webkit.CookieManager
+import android.window.OnBackInvokedDispatcher
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -117,6 +120,9 @@ class XboxActivity : Activity() {
         root.addView(bar, LinearLayout.LayoutParams(-1, -2))
         setContentView(root)
 
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { back() }
+        }
         if (savedInstanceState == null) web.loadUrl(URL) else web.restoreState(savedInstanceState)
         TranslateService.start(this, TranslateService.Source.XBOX)
     }
@@ -147,9 +153,17 @@ class XboxActivity : Activity() {
         super.onDestroy()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (web.canGoBack()) web.goBack() else super.onBackPressed()
+    /** Back: the player's page back, else leave. */
+    private fun back() {
+        if (web.canGoBack()) web.goBack() else finish()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && Build.VERSION.SDK_INT < 33) {
+            back()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     /** One copy of the page's picture, then the next a quarter of a second later. */
