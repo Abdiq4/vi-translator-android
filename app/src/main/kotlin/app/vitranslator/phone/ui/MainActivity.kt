@@ -213,11 +213,16 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
     /**
      * Debug builds only, for testing on emulators:
      * adb shell am start -n app.vitranslator.phone/.ui.MainActivity --es advertise 10.0.2.2:8791
+     * (and --es fake_ps5 <address>)
      */
     private fun debugOptions(i: Intent?) {
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) return
-        val a = i?.getStringExtra("advertise") ?: return
-        (App.core as? app.vitranslator.phone.core.StubCore)?.advertise = a
+        i?.getStringExtra("advertise")?.let { a -> (App.core as? app.vitranslator.phone.core.StubCore)?.advertise = a }
+        // --es fake_ps5 10.0.2.2: a PS5 "linked" with made-up keys, to try the stream's setup
+        i?.getStringExtra("fake_ps5")?.let { host ->
+            Ps5.save(this, app.vitranslator.phone.ps.PsConsole(host, "fake PS5", ByteArray(6), "0123abcd".toByteArray() + ByteArray(8), ByteArray(16)))
+            refreshConsole()
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

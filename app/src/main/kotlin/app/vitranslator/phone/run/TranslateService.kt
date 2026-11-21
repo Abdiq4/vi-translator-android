@@ -123,7 +123,10 @@ class TranslateService : Service(), PsStream.Listener {
                 core.startServer()
             } catch (e: Exception) {
                 Log.e(TAG, "core", e)
-                main.post { Live.set(Live.State.FAILED, e.message) }
+                main.post {
+                    Live.set(Live.State.FAILED, e.message)
+                    stopSelf()
+                }
                 return@Thread
             }
             val reader = Reader(core)
@@ -140,6 +143,7 @@ class TranslateService : Service(), PsStream.Listener {
         val reader = App.reader
         if (!Chiaki.available || console == null || reader == null) {
             Live.set(Live.State.FAILED, getString(if (!Chiaki.available) R.string.ps_not_in_build else R.string.ps_not_registered))
+            stopSelf()
             return
         }
         val res = if (prefs.psResolution == 720) VideoResolutionPreset.RES_720P else VideoResolutionPreset.RES_1080P
