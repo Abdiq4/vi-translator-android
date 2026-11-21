@@ -55,6 +55,9 @@ class PlayPanel(h: Host) : Panel(h) {
     /** lines older than this were cleared from the list (clear) */
     private var clearedAt = 0L
 
+    /** the live translations full screen, while open */
+    private var liveFull: LiveFull? = null
+
     init {
         // ---- start / stop
         start = k.button(T("Start translating"), primary = true, icon = R.drawable.ic_play) { startOrStop() }
@@ -103,6 +106,7 @@ class PlayPanel(h: Host) : Panel(h) {
                 clearedAt = App.core.lines(1).lastOrNull()?.id ?: 0L
                 lines()
             },
+            k.iconButton(R.drawable.ic_fullscreen, T("Live translations full screen")) { liveFullScreen() },
         )
         add(k.card(14, head, k.gap(6), log).apply { layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = k.dp(12) } })
     }
@@ -229,6 +233,7 @@ class PlayPanel(h: Host) : Panel(h) {
         val rtl = langs.firstOrNull { it.code == cfg.str("target_lang", "ar") }?.rtl ?: true
         // the latest of each area, drawn on the preview
         preview.shown = all.groupBy { it.areaId }.mapValues { (_, v) -> v.last().translated }.filterValues { it.isNotEmpty() }
+        liveFull?.update()
         log.removeAllViews()
         if (ls.isEmpty()) {
             log.addView(k.muted(T("Translations appear here as the game shows text."), small = true).apply {
@@ -255,6 +260,15 @@ class PlayPanel(h: Host) : Panel(h) {
             if (snap != null) Snaps.got(h, snap)
             else android.widget.Toast.makeText(h.act, T("Could not translate the picture: {e}", "e" to (err ?: "")), android.widget.Toast.LENGTH_LONG).show()
         }
+    }
+
+    /** The live translations full screen, upright or sideways, with the text size to choose (LiveFull). */
+    private fun liveFullScreen() {
+        val rtl = langs.firstOrNull { it.code == cfg.str("target_lang", "ar") }?.rtl ?: true
+        val f = LiveFull(h.act, k, rtl) { App.core.lines(LiveFull.MAX_LINES).filter { it.id > clearedAt } }
+        f.onClose = { liveFull = null }
+        liveFull = f
+        f.show()
     }
 
     override fun close() {

@@ -44,4 +44,21 @@ class Prefs(ctx: Context) {
     var psResolution: Int
         get() = p.getInt("ps_resolution", 720)
         set(v) = p.edit().putInt("ps_resolution", v).apply()
+
+    // ---- the live translations full screen (LiveFull)
+
+    /** the translations' text size there, in sp */
+    var liveTextSize: Float
+        get() = p.getFloat("live_text_size", 30f)
+        set(v) = p.edit().putFloat("live_text_size", v).apply()
+
+    /** the English line shown above each translation there */
+    var liveEnglish: Boolean
+        get() = p.getBoolean("live_english", true)
+        set(v) = p.edit().putBoolean("live_english", v).apply()
+
+    /** "auto" (turns with the phone), "portrait" or "landscape" */
+    var liveRotation: String
+        get() = p.getString("live_rotation", "auto") ?: "auto"
+        set(v) = p.edit().putString("live_rotation", v).apply()
 }
