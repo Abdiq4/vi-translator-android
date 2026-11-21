@@ -95,7 +95,8 @@ class SourcePanel(h: Host) : Panel(h) {
             @Suppress("DEPRECATION")
             h.act.startActivityForResult(Intent(h.act, PsnLoginActivity::class.java), REQ_PSN)
         }.apply { layoutParams = lp(10) })
-        account = k.input(Ps5.accountId(h.act), "", ltr = true) {}
+        // (kept as typed, or cleared: not only when linking)
+        account = k.input(Ps5.accountId(h.act), "", ltr = true) { Ps5.saveAccountId(h.act, it.trim()) }
         add(k.field(T("PSN account ID"), account!!))
         pin = k.input("", "12345678", number = true, ltr = true) {}
         add(k.field(T("The 8-digit PIN the PS5 shows"), pin!!))
