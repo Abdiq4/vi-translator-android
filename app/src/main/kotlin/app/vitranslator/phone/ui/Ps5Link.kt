@@ -20,9 +20,9 @@ import app.vitranslator.phone.ps.chiaki.DiscoveryService
 import app.vitranslator.phone.ps.chiaki.Regist
 
 /**
- * Linking a PS5, once, in three steps, each done before the next opens: find it on the home network
- * (searched at once; or its address typed), sign in to PSN with a second account (in the app, or in
- * a browser when Sony's check refuses the app), then the PIN the PS5 shows, and Link. Linked: the
+ * Linking a PS5, once, in three steps, each done before the next opens: sign in to PSN with a second
+ * account (in the app, or in a browser when Sony's check refuses the app), find it on the home network
+ * (searched at once; or its address typed), then the PIN the PS5 shows, and Link. Linked: the
  * console, with Wake, the stream's quality and Unlink.
  */
 class Ps5Link(private val h: Host, private val redraw: () -> Unit) {
@@ -64,8 +64,10 @@ class Ps5Link(private val h: Host, private val redraw: () -> Unit) {
         if (!searched) search()
         val addressOk = validAddress(address)
         val accountOk = validAccount(Ps5.accountId(h.act))
-        into.addView(step(1, T("Find your PS5"), addressOk && !editingAddress, true, findStep(addressOk)))
-        into.addView(step(2, T("Sign in to PSN"), accountOk && !editingAccount, addressOk && !editingAddress, signInStep(accountOk)))
+        // (PSN first, as Sony's own app: the step that may take a few tries; finding the PS5 next, then
+        // its PIN at once, which lasts only about 5 minutes)
+        into.addView(step(1, T("Sign in to PSN"), accountOk && !editingAccount, true, signInStep(accountOk)))
+        into.addView(step(2, T("Find your PS5"), addressOk && !editingAddress, accountOk && !editingAccount, findStep(addressOk)))
         into.addView(step(3, T("Enter the PIN from the PS5"), false, addressOk && accountOk && !editingAddress && !editingAccount, pinStep()))
     }
 
