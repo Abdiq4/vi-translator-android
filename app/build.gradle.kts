@@ -19,8 +19,10 @@ val nativeLibs = rootProject.file("native/out/jniLibs")
 
 // -PrequireNative: fail if the native libraries are missing (CI and release builds)
 if (findProperty("requireNative") != null) {
-    val so = nativeLibs.resolve("arm64-v8a/libchiaki-jni.so")
-    if (!so.exists()) throw GradleException("$so is missing: run native/build.sh first")
+    for (lib in listOf("libchiaki-jni.so", "libvi_translator_ffi.so")) {
+        val so = nativeLibs.resolve("arm64-v8a/$lib")
+        if (!so.exists()) throw GradleException("$so is missing: run native/build.sh first (VIT_CORE_DIR for the core)")
+    }
 }
 
 android {
@@ -84,6 +86,8 @@ android {
 dependencies {
     // on-device text recognition, Latin script, bundled in the APK (no download from Play services)
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // the shared core's UniFFI bindings (app.vitranslator.core) call its library through JNA
+    implementation("net.java.dev.jna:jna:5.17.0@aar")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
 }

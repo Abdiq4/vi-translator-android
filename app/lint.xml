@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- the core's generated bindings use java.lang.ref.Cleaner only after checking it exists (API 33+) -->
+    <issue id="NewApi">
+        <ignore path="src/main/kotlin/app/vitranslator/core/vi_translator_ffi.kt" />
+    </issue>
+</lint>

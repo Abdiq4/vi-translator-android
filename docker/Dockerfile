@@ -22,6 +22,12 @@ RUN mkdir -p $ANDROID_HOME/cmdline-tools \
 ENV ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}
 ENV PATH=$PATH:$ANDROID_HOME/platform-tools
 
+# Rust, for the shared core (vi-translator-ffi): the Android targets, cargo-ndk, and libclang for
+# its QuickJS bindings
+RUN apt-get update && apt-get install -y --no-install-recommends libclang-dev clang build-essential     && rm -rf /var/lib/apt/lists/*
+ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo PATH=/opt/cargo/bin:$PATH
+RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable     && rustup target add aarch64-linux-android x86_64-linux-android armv7-linux-androideabi     && cargo install cargo-ndk --version 4.1.2 --locked
+
 # (the repository is mounted here; git refuses a checkout owned by another user without this)
 RUN git config --global --add safe.directory '*'
 WORKDIR /src

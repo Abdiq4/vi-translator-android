@@ -30,6 +30,7 @@ import app.vitranslator.phone.R
 import app.vitranslator.phone.Updater
 import app.vitranslator.phone.core.CoreListener
 import app.vitranslator.phone.core.PairResult
+import app.vitranslator.phone.core.Service
 import app.vitranslator.phone.core.Tv
 import app.vitranslator.phone.ps.Ps5
 import app.vitranslator.phone.ps.PsnLoginActivity
@@ -69,6 +70,8 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
     private lateinit var stats: TextView
     private lateinit var lines: LinearLayout
     private lateinit var update: Button
+    private lateinit var serviceKey: EditText
+    private lateinit var coreStatus: TextView
 
     private var discovery: DiscoveryService? = null
     private var regist: Regist? = null
@@ -192,6 +195,36 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
             TextView(this).apply { text = getString(R.string.translate_into) },
             spinner(langs.map { it.name }, langs.indexOfFirst { it.code == prefs.language }.coerceAtLeast(0)) { prefs.language = langs[it].code },
         ))
+
+        root.addView(TextView(this).apply {
+            text = getString(R.string.service)
+            setPadding(0, dp(10), 0, 0)
+        })
+        val services = Service.entries
+        val serviceNames = resources.getStringArray(R.array.services).toList()
+        serviceKey = edit(R.string.service_key, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        val serviceSpinner = spinner(serviceNames, 0) { i -> serviceKey.visibility = if (services[i].keyName == null) View.GONE else View.VISIBLE }
+        root.addView(serviceSpinner)
+        root.addView(serviceKey)
+        root.addView(hint(R.string.service_hint))
+        root.addView(button(R.string.service_save) {
+            val s = services[serviceSpinner.selectedItemPosition]
+            val k = serviceKey.text.toString()
+            Thread {
+                App.core.setService(s, k)
+                main.post { coreStatus.text = getString(R.string.service_saved) }
+            }.start()
+        })
+        coreStatus = hint("")
+        root.addView(coreStatus)
+        Thread {
+            val (s, k) = App.core.service()
+            main.post {
+                serviceSpinner.setSelection(services.indexOf(s), false)
+                serviceKey.setText(k)
+                serviceKey.visibility = if (s.keyName == null) View.GONE else View.VISIBLE
+            }
+        }.start()
 
         // 4. start
         header(R.string.step_start)
@@ -368,6 +401,7 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
                         PairResult.WRONG_CODE -> R.string.tv_wrong_code
                         PairResult.NEW_CODE -> R.string.tv_new_code
                         PairResult.UNREACHABLE -> R.string.tv_unreachable
+                        PairResult.NOT_SHARING -> R.string.tv_not_sharing
                     },
                 )
                 if (r == PairResult.OK) {
@@ -427,6 +461,10 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
     }
 
     // ---- 5. the lines
+
+    override fun status(message: String) {
+        main.post { coreStatus.text = message }
+    }
 
     override fun linesChanged() {
         main.post {

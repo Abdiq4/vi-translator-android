@@ -5,18 +5,14 @@ import android.util.Log
 
 object Cores {
     /**
-     * The real core (libvi_translator_core.so and its UniFFI bindings) once it is in the build;
-     * until then, or if it fails to load, the stand-in.
+     * The real core when this build has its library (libvi_translator_ffi.so, built by
+     * native/build.sh); otherwise, or if it fails to start, the stand-in.
      */
-    fun create(ctx: Context): Core {
-        return try {
-            val cls = Class.forName("app.vitranslator.phone.core.RustCore")
-            cls.getConstructor(Context::class.java).newInstance(ctx) as Core
-        } catch (e: ClassNotFoundException) {
-            StubCore(ctx)
-        } catch (e: Throwable) {
-            Log.w("Cores", "the core didn't load, using the stand-in", e)
-            StubCore(ctx)
-        }
+    fun create(ctx: Context, recognizer: Recognizer): Core = try {
+        RustCore(ctx, recognizer)
+    } catch (e: Throwable) {
+        // (UnsatisfiedLinkError: a build without the core's library)
+        Log.w("Cores", "the core didn't load, using the stand-in: $e")
+        StubCore(ctx, recognizer)
     }
 }

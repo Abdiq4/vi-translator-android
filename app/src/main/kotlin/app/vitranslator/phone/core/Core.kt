@@ -1,13 +1,12 @@
 package app.vitranslator.phone.core
 
 /**
- * What the app needs from VI Translator's shared core (the Rust crate vi-translator-core, called
- * through UniFFI): the areas of the picture to read, the translation of what was read there, and
- * the TVs that show it. The rest of the app only talks to this, so the stand-in ([StubCore]) and the
- * real core ([RustCore]) swap without touching it.
+ * What the app needs from VI Translator's shared core (the Rust crate vi-translator-core, through
+ * its UniFFI bindings: [RustCore]): reading the game's frames, translating what is read, and the
+ * TVs that show it. The rest of the app only talks to this, so the stand-in ([StubCore], for builds
+ * without the core's library) and the real core swap without touching it.
  *
- * Kept to the shapes UniFFI makes (records, lists, strings, numbers), so the real one maps 1:1.
- * Every call may block (network, files): not on the main thread unless noted.
+ * Every call may block (network, files, text recognition): not on the main thread unless noted.
  */
 interface Core {
     /** Which core this is, for the about line ("stand-in" or the real core's version). Quick. */
@@ -20,25 +19,31 @@ interface Core {
     fun languages(): List<Language>
 
     /**
-     * Get ready for this game and language: loads (or downloads, then keeps) the translation memory.
-     * Throws [CoreException] when it can't (offline on first use, say).
+     * Get ready for this game and language: loads the translation memory and starts downloading
+     * the reviewed translations. Throws [CoreException] when it can't.
      */
     fun prepare(game: String, language: String)
 
-    /** The areas of the picture to read for the prepared game, as fractions of the frame. Quick. */
-    fun areas(): List<Area>
-
     /**
-     * One frame's reading: what text recognition found in each area. The core decides what is new,
-     * translates it, and puts it on the TVs. [timeMs]: when the frame was taken (monotonic).
+     * One frame of the game (RGBA, 4 bytes a pixel, rows of [width] pixels). The core crops its
+     * areas, has the app's [Recognizer] read them, and translates; the TVs show the result. Returns
+     * how many milliseconds to wait before the next frame (the core sets the pace).
      */
-    fun submit(frame: FrameRead)
+    fun processFrame(rgba: ByteArray, width: Int, height: Int): Long
 
-    /** The latest lines read and translated, newest last (at most [max]). Quick. */
+    /** No picture now (the stream stopped): what is shown goes once that lasts. */
+    fun noPicture()
+
+    /** The latest lines read and translated, newest last (at most [max]). */
     fun lines(max: Int): List<Line>
 
-    /** Told when [lines] changes (on the core's thread). Null to stop. */
+    /** Told when [lines] changes, and of status messages (on the core's threads). Null to stop. */
     fun setListener(listener: CoreListener?)
+
+    /** The translation service: [Service.MEMORY] (the translation memory only, free) or a service with its key. */
+    fun service(): Pair<Service, String>
+
+    fun setService(service: Service, key: String)
 
     /** Serve the TV page on the home network (the TVs load it from here). The port. */
     fun startServer(): Int
@@ -54,11 +59,29 @@ interface Core {
      */
     fun pairTv(address: String, code: String): PairResult
 
-    /** The TVs connected so far (remembered across runs). Quick. */
+    /** The TVs connected so far (remembered across runs). */
     fun pairedTvs(): List<Tv>
 
     /** Forget a TV (its key stops working; the TV shows a new code). */
     fun forgetTv(id: String)
+}
+
+/**
+ * The app's text recognition, which the core calls (synchronously, from its reading thread) on the
+ * crops it prepared: grey pictures, dark text on light, 4 bytes a pixel.
+ */
+interface Recognizer {
+    fun recognize(bgra: ByteArray, width: Int, height: Int): List<Word>
+}
+
+/** The translation services the core can use (the core's "engine" setting and the key's name). */
+enum class Service(val engine: String, val keyName: String?) {
+    /** no service: only lines the translation memory and the reviewed translations know */
+    MEMORY("local", null),
+    DEEPL("deepl", "deepl_key"),
+    GOOGLE("google", "google_key"),
+    CLAUDE("claude", "claude_key"),
+    OPENAI("openai", "openai_key"),
 }
 
 data class Game(val id: String, val name: String)
@@ -66,22 +89,13 @@ data class Game(val id: String, val name: String)
 /** [code]: a BCP 47 tag ("ar", "pt-BR"); [name]: in the language itself; [rtl]: written right to left. */
 data class Language(val code: String, val name: String, val rtl: Boolean)
 
-/** A part of the picture to read: [kind] "subtitle", "objective"...; the rectangle in fractions of the frame (0..1). */
-data class Area(val id: String, val kind: String, val left: Float, val top: Float, val right: Float, val bottom: Float)
-
-/** A word text recognition found, in pixels of its area's crop, and the line of the crop it is in (0, 1...). */
+/** A word text recognition found, in pixels of the picture it read, and the line it is in (0, 1...). */
 data class Word(val text: String, val left: Int, val top: Int, val right: Int, val bottom: Int, val line: Int)
 
-/** One area of one frame: its pixels (RGBA, 4 bytes each, row after row, [width] x [height]) and the words read in it. */
-class AreaRead(val areaId: String, val width: Int, val height: Int, val rgba: ByteArray, val words: List<Word>)
-
-/** A frame read: its full size in pixels (the areas are fractions of it) and each area's reading. */
-class FrameRead(val width: Int, val height: Int, val timeMs: Long, val areas: List<AreaRead>)
-
-/** A line read on the game and its translation ([translated] empty when there is none yet). */
+/** A line read on the game and its translation ([translated] empty when there is none). */
 data class Line(val id: Long, val areaId: String, val original: String, val translated: String, val timeMs: Long)
 
-/** [id]: the TV app's own id; [address]: "ip:port". */
+/** [id]: the TV app's own id; [address]: "ip:port" (empty when not known). */
 data class Tv(val id: String, val name: String, val address: String)
 
 enum class PairResult {
@@ -95,10 +109,16 @@ enum class PairResult {
 
     /** no TV app answered at that address */
     UNREACHABLE,
+
+    /** this phone isn't serving the TV page (no Wi-Fi?) */
+    NOT_SHARING,
 }
 
 interface CoreListener {
     fun linesChanged()
+
+    /** A status message from the core (a download, a translation service's problem). */
+    fun status(message: String) {}
 }
 
 class CoreException(message: String) : Exception(message)

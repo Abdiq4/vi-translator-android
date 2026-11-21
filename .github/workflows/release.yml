@@ -68,6 +68,24 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      - name: The shared core's commit
+        id: core
+        run: echo "ref=$(grep -v '^#' native/core.ref | grep -v '^$' | tail -n1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          repository: vi-translator/vi-translator-desktop
+          ref: ${{ steps.core.outputs.ref }}
+          path: core-src
+
+      - name: Rust for the shared core
+        run: |
+          rustup target add aarch64-linux-android x86_64-linux-android
+          cargo install cargo-ndk --version 4.1.2 --locked
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libclang-dev
+          echo "VIT_CORE_DIR=$GITHUB_WORKSPACE/core-src" >> "$GITHUB_ENV"
+          echo "core_sha=$(git -C core-src rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - name: Tools for chiaki-ng
         run: |
           sudo apt-get update
@@ -78,6 +96,11 @@ jobs:
 
       - name: Build the native libraries
         run: native/build.sh
+
+      - name: The core's Kotlin bindings in the repository match its library
+        run: |
+          git diff --exit-code -- app/src/main/kotlin/app/vitranslator/core/ || {
+            echo "::error::app/src/main/kotlin/app/vitranslator/core/vi_translator_ffi.kt differs from the core's at native/core.ref: commit the copied file"; exit 1; }
 
       - name: Keystore
         env:
@@ -101,6 +124,7 @@ jobs:
           [ -f "$APK" ] || { echo "::error::no signed APK (is the keystore right?)"; ls -R app/build/outputs; exit 1; }
           "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -n1)/apksigner verify --print-certs "$APK"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libchiaki-jni.so" || { echo "::error::the APK has no PS Remote Play library"; exit 1; }
+          unzip -l "$APK" | grep -q "lib/arm64-v8a/libvi_translator_ffi.so" || { echo "::error::the APK has no translation core"; exit 1; }
           mkdir -p out
           cp "$APK" "out/vi-translator-android-$VERSION.apk"
           cp "$APK" "out/vi-translator-android-latest.apk"

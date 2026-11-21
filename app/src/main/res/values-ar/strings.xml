@@ -75,4 +75,17 @@
     <string name="update_downloading">جارٍ تنزيل التحديث…</string>
     <string name="update_installing">جارٍ التثبيت…</string>
     <string name="update_failed">فشل التحديث: حاول مجددًا</string>
+    <string name="service">خدمة الترجمة</string>
+    <string name="service_key">مفتاح الخدمة</string>
+    <string name="service_hint">الأسطر الموجودة في ذاكرة الترجمة (ترجمات مراجَعة تُنزَّل من vitranslator.app) مجانية؛ وغيرها يحتاج خدمة ترجمة بمفتاحك الخاص.</string>
+    <string name="service_save">احفظ</string>
+    <string name="service_saved">تم الحفظ.</string>
+    <string name="tv_not_sharing">هذا الهاتف ليس على شبكة منزلية: اربطه بشبكة Wi-Fi نفسها التي عليها الشاشة.</string>
+    <string-array name="services">
+        <item>ذاكرة الترجمة فقط (مجانًا)</item>
+        <item>DeepL</item>
+        <item>Google</item>
+        <item>Claude</item>
+        <item>OpenAI</item>
+    </string-array>
 </resources>

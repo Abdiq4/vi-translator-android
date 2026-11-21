@@ -75,4 +75,17 @@
     <string name="update_downloading">Downloading the update…</string>
     <string name="update_installing">Installing…</string>
     <string name="update_failed">The update failed: try again</string>
+    <string name="service">Translation service</string>
+    <string name="service_key">The service\'s key</string>
+    <string name="service_hint">Lines the translation memory knows (reviewed translations, downloaded from vitranslator.app) are free; other lines need a translation service with your own key.</string>
+    <string name="service_save">Save</string>
+    <string name="service_saved">Saved.</string>
+    <string name="tv_not_sharing">This phone isn\'t on a home network: connect it to the same Wi-Fi as the TV.</string>
+    <string-array name="services">
+        <item>Translation memory only (free)</item>
+        <item>DeepL</item>
+        <item>Google</item>
+        <item>Claude</item>
+        <item>OpenAI</item>
+    </string-array>
 </resources>

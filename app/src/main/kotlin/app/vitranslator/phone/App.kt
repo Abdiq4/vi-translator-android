@@ -3,12 +3,13 @@ package app.vitranslator.phone
 import android.app.Application
 import app.vitranslator.phone.core.Core
 import app.vitranslator.phone.core.Cores
+import app.vitranslator.phone.read.MlKitRecognizer
 import app.vitranslator.phone.read.Reader
 
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        core = Cores.create(this)
+        core = Cores.create(this, MlKitRecognizer())
         // The TV page is served while the app runs (as the PC app does while open): a connected TV
         // finds the phone at once, and shows the translations when translating starts.
         Thread {

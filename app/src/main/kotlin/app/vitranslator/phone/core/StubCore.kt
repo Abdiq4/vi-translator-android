@@ -25,7 +25,7 @@ import java.util.concurrent.Executors
  * "translated" from a few built-in phrases, else shown as read, marked with the language. Enough to
  * build and test everything around it (capture, text recognition, the TVs, the screens).
  */
-class StubCore(context: Context) : Core {
+class StubCore(context: Context, private val recognizer: Recognizer) : Core {
     private val ctx = context.applicationContext
     private val prefs = ctx.getSharedPreferences("stub-core", Context.MODE_PRIVATE)
     private val random = SecureRandom()
@@ -62,25 +62,43 @@ class StubCore(context: Context) : Core {
         bump()
     }
 
-    override fun areas() = AREAS
-
-    override fun submit(frame: FrameRead) {
+    override fun processFrame(rgba: ByteArray, width: Int, height: Int): Long {
+        val now = System.currentTimeMillis()
         var added = false
-        synchronized(this) {
-            for (a in frame.areas) {
-                val text = textOf(a.words)
-                if (text == lastText[a.areaId]) continue
-                lastText[a.areaId] = text
-                if (text.isEmpty()) continue
-                lines.add(Line(nextId++, a.areaId, text, translate(text, language), frame.timeMs))
-                while (lines.size > 200) lines.removeAt(0)
-                added = true
+        for (a in AREAS) {
+            val (l, t, r, b) = boundsOf(a, width, height).toList()
+            if (r - l < 8 || b - t < 8) continue
+            val text = textOf(recognizer.recognize(crop(rgba, width, l, t, r, b), r - l, b - t))
+            synchronized(this) {
+                if (text != lastText[a.id]) {
+                    lastText[a.id] = text
+                    if (text.isNotEmpty()) {
+                        lines.add(Line(nextId++, a.id, text, translate(text, language), now))
+                        while (lines.size > 200) lines.removeAt(0)
+                        added = true
+                    }
+                }
             }
         }
         if (added) {
             bump()
             listener?.linesChanged()
         }
+        return 250
+    }
+
+    override fun noPicture() {
+        synchronized(this) { lastText.clear() }
+        bump()
+    }
+
+    override fun service(): Pair<Service, String> {
+        val s = Service.entries.firstOrNull { it.name == prefs.getString("service", null) } ?: Service.MEMORY
+        return s to (prefs.getString("service_key", "") ?: "")
+    }
+
+    override fun setService(service: Service, key: String) {
+        prefs.edit().putString("service", service.name).putString("service_key", key).apply()
     }
 
     override fun lines(max: Int): List<Line> = synchronized(this) { lines.takeLast(max) }
@@ -117,6 +135,7 @@ class StubCore(context: Context) : Core {
 
     override fun pairTv(address: String, code: String): PairResult {
         val to = TvLink.normalize(address) ?: return PairResult.UNREACHABLE
+        if (server == null) return PairResult.NOT_SHARING
         val pc = advertise.ifEmpty { TvLink.ownAddress(ctx)?.hostAddress?.let { "$it:$PAGE_PORT" } } ?: return PairResult.UNREACHABLE
         val bytes = ByteArray(32).also { random.nextBytes(it) }
         val token = bytes.joinToString("") { String.format(Locale.ROOT, "%02x", it) }
@@ -256,6 +275,9 @@ class StubCore(context: Context) : Core {
             .put("areas", areas).put("shown", shown)
     }
 
+    /** A part of the picture to read, in fractions of the frame. */
+    data class Area(val id: String, val left: Float, val top: Float, val right: Float, val bottom: Float)
+
     companion object {
         const val PAGE_PORT = 8791
 
@@ -264,9 +286,9 @@ class StubCore(context: Context) : Core {
 
         val AREAS = listOf(
             // GTA's subtitles: bottom middle
-            Area("subtitle", "subtitle", 0.12f, 0.80f, 0.88f, 0.96f),
+            Area("subtitle", 0.12f, 0.80f, 0.88f, 0.96f),
             // help and objectives: the box at the top left
-            Area("help", "objective", 0.02f, 0.03f, 0.36f, 0.24f),
+            Area("help", 0.02f, 0.03f, 0.36f, 0.24f),
         )
 
         val LANGUAGES = listOf(
@@ -301,6 +323,34 @@ class StubCore(context: Context) : Core {
                 "watch out" to "انتبه",
             ),
         )
+
+        /** The area's rectangle in pixels (left, top, right, bottom), inside the frame. */
+        fun boundsOf(a: Area, w: Int, h: Int): IntArray {
+            val l = (a.left * w).toInt().coerceIn(0, w - 1)
+            val t = (a.top * h).toInt().coerceIn(0, h - 1)
+            val r = (a.right * w).toInt().coerceIn(l + 1, w)
+            val b = (a.bottom * h).toInt().coerceIn(t + 1, h)
+            return intArrayOf(l, t, r, b)
+        }
+
+        /** A part of an RGBA picture, made grey (as the core gives its recognizer). */
+        fun crop(rgba: ByteArray, width: Int, l: Int, t: Int, r: Int, b: Int): ByteArray {
+            val out = ByteArray((r - l) * (b - t) * 4)
+            var o = 0
+            for (y in t until b) {
+                var i = (y * width + l) * 4
+                for (x in l until r) {
+                    val g = ((rgba[i].toInt() and 255) * 77 + (rgba[i + 1].toInt() and 255) * 150 + (rgba[i + 2].toInt() and 255) * 29) shr 8
+                    out[o] = g.toByte()
+                    out[o + 1] = g.toByte()
+                    out[o + 2] = g.toByte()
+                    out[o + 3] = -1
+                    o += 4
+                    i += 4
+                }
+            }
+            return out
+        }
 
         /** The words of one area as its text: line by line, words left to right. */
         fun textOf(words: List<Word>): String =

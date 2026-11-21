@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Builds the app's native libraries into native/out/jniLibs/<abi>/, where Gradle picks them up:
 #   libchiaki-jni.so       PS Remote Play (chiaki-ng, from third-party/chiaki-ng)
-#   libvi_translator_core.so  the shared Rust core, when VIT_CORE_DIR points at its crate (cargo-ndk)
+#   libvi_translator_ffi.so   the shared Rust core (vi-translator-ffi, from the desktop app's
+#                             repository), when VIT_CORE_DIR points at that repository (cargo-ndk);
+#                             its Kotlin bindings are copied into the app with it, so they match
 # Linux only (chiaki-ng needs protoc and builds OpenSSL from source): run it in the Docker image
 # (docker/build.sh) or on an Ubuntu CI runner. Needs ANDROID_NDK_HOME (or ANDROID_HOME with the NDK).
 set -euo pipefail
@@ -33,10 +35,13 @@ for ABI in $ABIS; do
 done
 
 if [ -n "${VIT_CORE_DIR:-}" ]; then
-  echo "== vi-translator-core from $VIT_CORE_DIR"
+  echo "== vi-translator-core from $VIT_CORE_DIR ($(git -C "$VIT_CORE_DIR" rev-parse --short HEAD 2>/dev/null || echo '?'))"
   ARGS=()
   for ABI in $ABIS; do ARGS+=(-t "$ABI"); done
-  (cd "$VIT_CORE_DIR" && cargo ndk "${ARGS[@]}" -P "$API" -o "$NATIVE/out/jniLibs" build --release)
+  # (its own target folder: the core's checkout may also be built for the desktop)
+  export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$NATIVE/build/core-target}"
+  (cd "$VIT_CORE_DIR" && cargo ndk "${ARGS[@]}" -o "$NATIVE/out/jniLibs" build -p vi-translator-ffi --release)
+  cp "$VIT_CORE_DIR/core/bindings/kotlin/app/vitranslator/core/vi_translator_ffi.kt"      "$NATIVE/../app/src/main/kotlin/app/vitranslator/core/vi_translator_ffi.kt"
 fi
 
 ls -l out/jniLibs/*

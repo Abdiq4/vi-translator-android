@@ -25,6 +25,24 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      - name: The shared core's commit
+        id: core
+        run: echo "ref=$(grep -v '^#' native/core.ref | grep -v '^$' | tail -n1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          repository: vi-translator/vi-translator-desktop
+          ref: ${{ steps.core.outputs.ref }}
+          path: core-src
+
+      - name: Rust for the shared core
+        run: |
+          rustup target add aarch64-linux-android x86_64-linux-android
+          cargo install cargo-ndk --version 4.1.2 --locked
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libclang-dev
+          echo "VIT_CORE_DIR=$GITHUB_WORKSPACE/core-src" >> "$GITHUB_ENV"
+          echo "core_sha=$(git -C core-src rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - name: Tools for chiaki-ng
         run: |
           sudo apt-get update
@@ -42,11 +60,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: native/out
-          key: native-${{ steps.chiaki.outputs.sha }}-${{ hashFiles('native/CMakeLists.txt', 'native/build.sh', 'native/jni/**', 'native/cmake/**') }}
+          key: native-${{ steps.chiaki.outputs.sha }}-${{ env.core_sha }}-${{ hashFiles('native/CMakeLists.txt', 'native/build.sh', 'native/jni/**', 'native/cmake/**') }}
 
       - name: Build the native libraries
         if: steps.native-cache.outputs.cache-hit != 'true'
         run: native/build.sh
+
+      - name: The core's Kotlin bindings in the repository match its library
+        run: |
+          git diff --exit-code -- app/src/main/kotlin/app/vitranslator/core/ || {
+            echo "::error::app/src/main/kotlin/app/vitranslator/core/vi_translator_ffi.kt differs from the core's at native/core.ref: commit the copied file"; exit 1; }
 
       - name: Tests and the debug APK
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug -PrequireNative

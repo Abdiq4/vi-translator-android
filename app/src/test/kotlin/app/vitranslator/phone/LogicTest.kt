@@ -1,11 +1,9 @@
 package app.vitranslator.phone
 
-import app.vitranslator.phone.core.Area
 import app.vitranslator.phone.core.StubCore
 import app.vitranslator.phone.core.TvLink
 import app.vitranslator.phone.core.Word
 import app.vitranslator.phone.ps.Psn
-import app.vitranslator.phone.read.Reader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -51,9 +49,9 @@ class LogicTest {
 
     @Test
     fun areaRectanglesStayInTheFrame() {
-        val r = Reader.boundsOf(Area("s", "subtitle", 0.1f, 0.8f, 0.9f, 1.2f), 1920, 1080)
+        val r = StubCore.boundsOf(StubCore.Area("s", 0.1f, 0.8f, 0.9f, 1.2f), 1920, 1080)
         assertEquals(listOf(192, 864, 1728, 1080), r.toList())
-        val (l, t, rr, b) = Reader.boundsOf(Area("t", "x", 1f, 1f, 1f, 1f), 100, 100).toList()
+        val (l, t, rr, b) = StubCore.boundsOf(StubCore.Area("t", 1f, 1f, 1f, 1f), 100, 100).toList()
         assertTrue(rr - l >= 1 && b - t >= 1 && rr <= 100 && b <= 100)
     }
 
