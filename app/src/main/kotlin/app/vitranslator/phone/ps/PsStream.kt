@@ -1,7 +1,9 @@
 package app.vitranslator.phone.ps
 
 import android.graphics.ImageFormat
+import android.hardware.HardwareBuffer
 import android.media.ImageReader
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
@@ -51,7 +53,13 @@ class PsStream(
 
     fun start(resolution: VideoResolutionPreset = VideoResolutionPreset.RES_1080P) {
         val profile = ConnectVideoProfile.preset(resolution, VideoFPSPreset.FPS_30, Codec.CODEC_H264)
-        val ir = ImageReader.newInstance(profile.width, profile.height, ImageFormat.YUV_420_888, 3)
+        // (the buffers are read by the CPU: said so, many phones' hardware decoders (Qualcomm, MediaTek)
+        // otherwise write them compressed or tiled, which reads as a green, striped picture)
+        val ir = if (Build.VERSION.SDK_INT >= 29) {
+            ImageReader.newInstance(profile.width, profile.height, ImageFormat.YUV_420_888, 3, HardwareBuffer.USAGE_CPU_READ_OFTEN)
+        } else {
+            ImageReader.newInstance(profile.width, profile.height, ImageFormat.YUV_420_888, 3)
+        }
         ir.setOnImageAvailableListener({ r ->
             val img = try {
                 r.acquireLatestImage()
