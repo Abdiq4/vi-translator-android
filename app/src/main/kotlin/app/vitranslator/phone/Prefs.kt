@@ -40,8 +40,8 @@ class Prefs(ctx: Context) {
         get() = p.getString("mode", "setup") ?: "setup"
         set(v) = p.edit().putString("mode", v).apply()
 
-    /** the PS5 stream's resolution: 720 or 1080 */
+    /** the PS5 stream's resolution: 720 (the default) or 1080 */
     var psResolution: Int
-        get() = p.getInt("ps_resolution", 1080)
+        get() = p.getInt("ps_resolution", 720)
         set(v) = p.edit().putInt("ps_resolution", v).apply()
 }
