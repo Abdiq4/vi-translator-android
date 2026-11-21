@@ -413,20 +413,18 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
 
     override fun askPin(incorrect: Boolean) {
         val e = k.input("", T("Passcode"), password = true) {}
-        val d = android.app.Dialog(this)
-        d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
-        d.setContentView(
+        var d: android.app.Dialog? = null
+        d = k.dialog(
             k.card(
                 18,
                 k.text(T(if (incorrect) "Wrong passcode: try again" else "The PS5 asks for the account's passcode"), k.base + 0.5f),
                 k.gap(12), e, k.gap(12),
                 k.button(T("OK"), primary = true) {
                     TranslateService.instance?.pin(e.text.toString())
-                    d.dismiss()
+                    d?.dismiss()
                 },
             ),
         )
-        d.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         d.show()
     }
 

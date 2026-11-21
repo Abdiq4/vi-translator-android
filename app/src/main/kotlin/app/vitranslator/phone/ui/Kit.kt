@@ -325,6 +325,16 @@ class Kit(val ctx: Context, val dark: Boolean) {
         d.show()
     }
 
+    /** A small dialog of the app's: [content] on a transparent window, 88% of the screen's width. */
+    fun dialog(content: View): Dialog {
+        val d = Dialog(ctx)
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        d.setContentView(content)
+        d.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        d.window?.setLayout((ctx.resources.displayMetrics.widthPixels * 0.88).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+        return d
+    }
+
     /** A question with OK / Cancel (the desktop's ask()). */
     fun ask(question: String, ok: String, yes: () -> Unit) {
         val d = Dialog(ctx)
@@ -400,17 +410,15 @@ class Kit(val ctx: Context, val dark: Boolean) {
             pick(T("Colour"), presets.map { it to it } + listOf("custom" to T("Custom…")), label.text.toString()) { c ->
                 if (c == "custom") {
                     val e = input(label.text.toString(), "#rrggbb", ltr = true) {}
-                    val d = Dialog(ctx)
-                    d.requestWindowFeature(Window.FEATURE_NO_TITLE)
-                    d.setContentView(card(18, e, gap(12), button(T("OK"), primary = true) {
+                    var d: Dialog? = null
+                    d = dialog(card(18, e, gap(12), button(T("OK"), primary = true) {
                         val v = e.text.toString().trim()
                         if (Regex("^#[0-9a-fA-F]{6}$").matches(v)) {
                             paint(v.lowercase())
                             changed(v.lowercase())
                         }
-                        d.dismiss()
+                        d?.dismiss()
                     }))
-                    d.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                     d.show()
                 } else {
                     paint(c)

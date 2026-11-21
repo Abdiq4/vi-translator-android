@@ -404,10 +404,10 @@ class ShowPanel(h: Host) : Panel(h) {
 
     private fun typeAddress() {
         val e = k.input("", "192.168.1.30", ltr = true) {}
-        val d = dialog()
-        d.setContentView(k.card(18, k.text(T("The TV's address"), k.base + 0.5f, k.text, k.bold), k.gap(10), e, k.gap(12),
+        var d: android.app.Dialog? = null
+        d = k.dialog(k.card(18, k.text(T("The TV's address"), k.base + 0.5f, k.text, k.bold), k.gap(10), e, k.gap(12),
             k.button(T("Next"), primary = true) {
-                d.dismiss()
+                d?.dismiss()
                 if (e.text.isNotBlank()) askCode(e.text.toString().trim(), e.text.toString().trim())
             }))
         d.show()
@@ -417,8 +417,8 @@ class ShowPanel(h: Host) : Panel(h) {
     private fun askCode(address: String, name: String) {
         val e = k.input("", "000000", number = true, ltr = true) {}
         val msg = k.muted("", small = true)
-        val d = dialog()
-        d.setContentView(k.card(18, k.text(T("Enter the code {name} shows", "name" to name), k.base + 0.5f, k.text, k.bold), k.gap(10), e, msg, k.gap(12),
+        var d: android.app.Dialog? = null
+        d = k.dialog(k.card(18, k.text(T("Enter the code {name} shows", "name" to name), k.base + 0.5f, k.text, k.bold), k.gap(10), e, msg, k.gap(12),
             k.button(T("Connect"), primary = true) {
                 val code = e.text.toString().filter { it.isDigit() }
                 if (code.length != 6) {
@@ -437,7 +437,7 @@ class ShowPanel(h: Host) : Panel(h) {
                             PairResult.UNREACHABLE -> T("The TV didn't answer. Is VI Translator still open on it?")
                         }
                         if (r == PairResult.OK) {
-                            d.dismiss()
+                            d?.dismiss()
                             tvFound.removeAllViews()
                             listTvs()
                         }
@@ -445,11 +445,6 @@ class ShowPanel(h: Host) : Panel(h) {
                 }
             }))
         d.show()
-    }
-
-    private fun dialog() = android.app.Dialog(h.act).apply {
-        requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
-        window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
     }
 }
 
