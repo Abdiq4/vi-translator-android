@@ -92,6 +92,43 @@ class StubCore(context: Context, private val recognizer: Recognizer) : Core {
         bump()
     }
 
+    override fun configJson(): String = synchronized(this) {
+        val c = try {
+            JSONObject(prefs.getString("config", "{}"))
+        } catch (e: Exception) {
+            JSONObject()
+        }
+        val profile = JSONObject().put("id", "gta6").put("name", "Grand Theft Auto VI").put("game", "gta6")
+            .put("areas", JSONArray(AREAS.map {
+                JSONObject().put("id", it.id).put("name", it.id).put("enabled", true).put("x", it.left.toDouble()).put("y", it.top.toDouble())
+                    .put("w", (it.right - it.left).toDouble()).put("h", (it.bottom - it.top).toDouble()).put("placement", "over").put("font_scale", 1.0)
+            }))
+            .put("style", JSONObject().put("font_family", "Tajawal").put("font_size", 26.0).put("bold", true).put("text_color", "#ffffff")
+                .put("bg_color", "#000000").put("bg_opacity", 0.65).put("outline_color", "#000000").put("outline_width", 0.0).put("shadow", true)
+                .put("padding", 10.0).put("radius", 10.0).put("line_height", 1.5).put("keep_colors", true))
+            .put("pages", JSONObject()).put("timing", JSONObject())
+        val defaults = JSONObject().put("engine", "local").put("target_lang", language).put("overlays_enabled", true).put("live_translations", true)
+            .put("theme", "dark").put("ui_lang", "").put("capture_fps", 12).put("preview_fps", 30).put("interval_ms", 250).put("stable_ms", 300)
+            .put("clear_after_ms", 800).put("builtins", JSONArray().put(profile)).put("profiles", JSONArray()).put("profile", "gta6")
+            .put("areas", profile.getJSONArray("areas")).put("style", profile.getJSONObject("style")).put("profile_opts", JSONObject())
+        for (k in c.keys()) defaults.put(k, c.get(k))
+        defaults.toString()
+    }
+
+    override fun updateConfig(patch: String) {
+        synchronized(this) {
+            val c = try {
+                JSONObject(prefs.getString("config", "{}"))
+            } catch (e: Exception) {
+                JSONObject()
+            }
+            val p = JSONObject(patch)
+            for (k in p.keys()) c.put(k, p.get(k))
+            prefs.edit().putString("config", c.toString()).apply()
+            if (p.has("target_lang")) language = p.getString("target_lang")
+        }
+    }
+
     override fun service(): Pair<Service, String> {
         val s = Service.entries.firstOrNull { it.name == prefs.getString("service", null) } ?: Service.MEMORY
         return s to (prefs.getString("service_key", "") ?: "")

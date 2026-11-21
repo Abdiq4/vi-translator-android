@@ -45,6 +45,36 @@ interface Core {
 
     fun setService(service: Service, key: String)
 
+    /**
+     * The settings, as the desktop app's config.json (the same keys: engine, target_lang, profiles,
+     * areas, style, timing...). The screens read it whole and change it with [updateConfig].
+     */
+    fun configJson(): String
+
+    /** Change some settings: a JSON object of the keys to set (saved, and used at once). */
+    fun updateConfig(patch: String)
+
+    /** The translation memory's numbers (entries, hits, misses, avg_hit_ms, avg_miss_ms), as JSON. */
+    fun memoryStatsJson(): String = "{}"
+
+    /** How the reading keeps up over the last minute (read, translate, ready: avg and max ms; minutes), as JSON. */
+    fun perfJson(): String = "{}"
+
+    /** Forget every remembered translation. False when this core can't (yet). */
+    fun memoryClear(): Boolean = false
+
+    /** The game pages a game's pages script has and the switches it declares ({"pages": [...], "options": [...]}), or null when unknown. */
+    fun pageOptions(game: String): String? = null
+
+    /** The whole picture translated at once (the desktop's Snapshot), as JSON; null when this core can't (yet). */
+    fun takeSnapshot(rgba: ByteArray, width: Int, height: Int): String? = null
+
+    /** The home-network page with the live translations: {"url"} or {"error"}; null when this core has none (yet). */
+    fun lanInfo(): String? = null
+
+    /** The core's own version ("" for the stand-in). */
+    val coreVersion: String get() = ""
+
     /** Serve the TV page on the home network (the TVs load it from here). The port. */
     fun startServer(): Int
 
@@ -86,8 +116,8 @@ enum class Service(val engine: String, val keyName: String?) {
 
 data class Game(val id: String, val name: String)
 
-/** [code]: a BCP 47 tag ("ar", "pt-BR"); [name]: in the language itself; [rtl]: written right to left. */
-data class Language(val code: String, val name: String, val rtl: Boolean)
+/** [code]: a BCP 47 tag ("ar", "pt-BR"); [name]: in the language itself; [rtl]: written right to left; [english]: its English name. */
+data class Language(val code: String, val name: String, val rtl: Boolean, val english: String = "")
 
 /** A word text recognition found, in pixels of the picture it read, and the line it is in (0, 1...). */
 data class Word(val text: String, val left: Int, val top: Int, val right: Int, val bottom: Int, val line: Int)

@@ -119,7 +119,12 @@ class TranslateService : Service(), PsStream.Listener {
         Thread {
             val core = App.core
             try {
-                core.prepare(prefs.game, prefs.language)
+                // the language and the game: the settings' (the desktop's target_lang, and the game of the profile in use)
+                val c = org.json.JSONObject(core.configJson())
+                val profile = (0 until (c.optJSONArray("builtins")?.length() ?: 0)).map { c.getJSONArray("builtins").getJSONObject(it) } +
+                    (0 until (c.optJSONArray("profiles")?.length() ?: 0)).map { c.getJSONArray("profiles").getJSONObject(it) }
+                val game = profile.firstOrNull { it.optString("id") == c.optString("profile") }?.optString("game")?.ifEmpty { null } ?: "gta6"
+                core.prepare(game, c.optString("target_lang").ifEmpty { "ar" })
                 core.startServer()
             } catch (e: Exception) {
                 Log.e(TAG, "core", e)

@@ -25,6 +25,21 @@ class Prefs(ctx: Context) {
         get() = p.getString("ui_language", "") ?: ""
         set(v) = p.edit().putString("ui_language", v).apply()
 
+    /** dark theme (the desktop's "theme" setting, kept here too for the first frame) */
+    var dark: Boolean
+        get() = p.getBoolean("dark", true)
+        set(v) = p.edit().putBoolean("dark", v).apply()
+
+    /** the live picture in the app (the header's Preview switch) */
+    var preview: Boolean
+        get() = p.getBoolean("preview", true)
+        set(v) = p.edit().putBoolean("preview", v).apply()
+
+    /** "play" or "setup", as last left */
+    var lastMode: String
+        get() = p.getString("mode", "setup") ?: "setup"
+        set(v) = p.edit().putString("mode", v).apply()
+
     /** the PS5 stream's resolution: 720 or 1080 */
     var psResolution: Int
         get() = p.getInt("ps_resolution", 1080)

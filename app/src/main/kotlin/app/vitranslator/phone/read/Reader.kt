@@ -1,8 +1,10 @@
 package app.vitranslator.phone.read
 
+import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
 import app.vitranslator.phone.core.Core
+import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -36,6 +38,10 @@ class Reader(private val core: Core) {
     var frameSize = ""
         private set
 
+    /** The screen's preview, while it shows one: gets a small copy of each frame read (on the reading thread). */
+    @Volatile
+    var preview: ((Bitmap) -> Unit)? = null
+
     /**
      * A new frame (on the producer's thread). True when it was taken: it was copied before this
      * returns, so the producer can let the frame go either way.
@@ -56,7 +62,9 @@ class Reader(private val core: Core) {
             try {
                 val start = SystemClock.elapsedRealtime()
                 frameSize = "${snap.width}x${snap.height}"
-                val wait = core.processFrame(snap.rgba(), snap.width, snap.height)
+                val rgba = snap.rgba()
+                preview?.let { show -> small(rgba, snap.width, snap.height)?.let(show) }
+                val wait = core.processFrame(rgba, snap.width, snap.height)
                 lastMs = SystemClock.elapsedRealtime() - start
                 nextAt = start + wait.coerceIn(0, 2000)
                 read++
@@ -88,5 +96,14 @@ class Reader(private val core: Core) {
 
     companion object {
         private const val TAG = "Reader"
+
+        /** The frame at most 960 pixels wide, for the preview. */
+        fun small(rgba: ByteArray, w: Int, h: Int): Bitmap? = try {
+            val full = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            full.copyPixelsFromBuffer(ByteBuffer.wrap(rgba))
+            if (w <= 960) full else Bitmap.createScaledBitmap(full, 960, 960 * h / w, true).also { full.recycle() }
+        } catch (e: RuntimeException) {
+            null
+        }
     }
 }

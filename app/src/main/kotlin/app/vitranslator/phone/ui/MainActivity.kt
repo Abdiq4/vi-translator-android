@@ -2,26 +2,22 @@ package app.vitranslator.phone.ui
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Typeface
+import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
+import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.TextView
 import app.vitranslator.phone.App
 import app.vitranslator.phone.Lang
@@ -29,52 +25,35 @@ import app.vitranslator.phone.Prefs
 import app.vitranslator.phone.R
 import app.vitranslator.phone.Updater
 import app.vitranslator.phone.core.CoreListener
-import app.vitranslator.phone.core.PairResult
-import app.vitranslator.phone.core.Service
-import app.vitranslator.phone.core.Tv
-import app.vitranslator.phone.ps.Ps5
-import app.vitranslator.phone.ps.PsnLoginActivity
-import app.vitranslator.phone.ps.chiaki.Chiaki
-import app.vitranslator.phone.ps.chiaki.DiscoveryHost
-import app.vitranslator.phone.ps.chiaki.DiscoveryService
-import app.vitranslator.phone.ps.chiaki.Regist
 import app.vitranslator.phone.run.Live
 import app.vitranslator.phone.run.TranslateService
-import app.vitranslator.phone.xbox.XboxActivity
+import java.util.Locale
+import java.util.concurrent.Executors
 
 /**
- * The one screen, top to bottom: the console (and its setup), the TVs, the game and language,
- * Start translating, and the lines read and translated, live.
+ * The app, laid out as the desktop app for a phone: the header (who we are, Setup / Play, what's
+ * happening, the quick switches, the app's language and light / dark), then either Play (the
+ * picture, what is running, the live translations) or Setup (the desktop's tabs, in a strip).
  */
-class MainActivity : Activity(), Live.Watcher, CoreListener {
+class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
+    override lateinit var k: Kit
+    override val cfg = Cfg(App.core)
+    override val act: Activity get() = this
     private val main = Handler(Looper.getMainLooper())
-    private lateinit var prefs: Prefs
-    private lateinit var root: LinearLayout
+    private val pool = Executors.newCachedThreadPool()
 
-    private lateinit var psPanel: LinearLayout
-    private lateinit var xboxPanel: LinearLayout
-    private lateinit var psButton: Button
-    private lateinit var xboxButton: Button
-    private lateinit var psStatus: TextView
-    private lateinit var psHost: EditText
-    private lateinit var psAccount: EditText
-    private lateinit var psPin: EditText
-    private lateinit var psFound: LinearLayout
-    private lateinit var tvList: LinearLayout
-    private lateinit var tvFound: LinearLayout
-    private lateinit var tvAddress: EditText
-    private lateinit var tvCode: EditText
-    private lateinit var tvStatus: TextView
-    private lateinit var startButton: Button
+    private lateinit var body: FrameLayout
     private lateinit var status: TextView
-    private lateinit var stats: TextView
-    private lateinit var lines: LinearLayout
-    private lateinit var update: Button
-    private lateinit var serviceKey: EditText
-    private lateinit var coreStatus: TextView
-
-    private var discovery: DiscoveryService? = null
-    private var regist: Regist? = null
+    private lateinit var statusDot: View
+    private lateinit var savedLabel: TextView
+    private lateinit var modeSetup: TextView
+    private lateinit var modePlay: TextView
+    private lateinit var updateBar: LinearLayout
+    private var mode = "play"
+    private var tab = "source"
+    private var panel: Panel? = null
+    private var coreStatus: String? = null
+    private var loaded = false
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(Lang.wrap(base))
@@ -82,485 +61,478 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        prefs = Prefs(this)
-        root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(16), dp(16), dp(32))
+        val prefs = Prefs(this)
+        mode = savedInstanceState?.getString("mode") ?: prefs.lastMode
+        tab = savedInstanceState?.getString("tab") ?: "source"
+        T.load(this, prefs.uiLanguage.ifEmpty { "en" })
+        k = Kit(this, prefs.dark)
+        window.decorView.setBackgroundColor(k.bg)
+        setContentView(FrameLayout(this).apply { setBackgroundColor(k.bg) })
+        // the settings come from the core (its files): a moment off the main thread, then the screen
+        io {
+            val json = try {
+                cfg.loadBlocking()
+            } catch (e: Exception) {
+                org.json.JSONObject()
+            }
+            ui {
+                cfg.set(json)
+                // the interface language and the theme are the desktop's settings; the phone's language picks the first
+                var lang = cfg.str("ui_lang")
+                if (lang.isEmpty()) {
+                    T.load(this, "en")
+                    lang = T.fromLocale(Locale.getDefault())
+                    cfg.put("ui_lang", lang)
+                }
+                val dark = cfg.str("theme", "dark") != "light"
+                if (lang != prefs.uiLanguage || dark != prefs.dark) {
+                    prefs.uiLanguage = lang
+                    prefs.dark = dark
+                    cfg.flush()
+                    recreate()
+                    return@ui
+                }
+                loaded = true
+                build()
+                debugOptions(intent)
+            }
         }
-        setContentView(ScrollView(this).apply { addView(root) })
-        build()
-        debugOptions(intent)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2)
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("mode", mode)
+        outState.putString("tab", tab)
+    }
+
+    // ---- the frame of the screen
+
+    private fun build() {
+        cfg.saved = { ok ->
+            savedLabel.text = if (ok) T("Saved ✓") else T("Save failed")
+            main.removeCallbacks(clearSaved)
+            main.postDelayed(clearSaved, 1500)
+        }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(k.bg)
+            layoutDirection = if (T.rtl) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+        }
+        root.addView(header())
+        updateBar = k.row().apply {
+            background = k.round(k.accentSoft, 0)
+            setPadding(k.dp(16), k.dp(8), k.dp(16), k.dp(8))
+            visibility = View.GONE
+        }
+        root.addView(updateBar)
+        body = FrameLayout(this)
+        root.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        setContentView(root)
+        window.statusBarColor = k.panel
+        window.navigationBarColor = k.bg
+        @Suppress("DEPRECATION")
+        if (!k.dark) window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        showMode()
+        changed()
+        showUpdate()
+    }
+
+    private val clearSaved = Runnable { savedLabel.text = "" }
+
+    private fun header(): View {
+        val logo = ImageView(this).apply {
+            setImageResource(R.mipmap.ic_launcher)
+            clipToOutline = true
+            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+            background = k.round(Color.TRANSPARENT, 10)
+            layoutParams = LinearLayout.LayoutParams(k.dp(36), k.dp(36))
+        }
+        val version = k.text("v" + Updater.current(this), k.base - 3.5f, k.muted, k.bold).apply { textDirection = View.TEXT_DIRECTION_LTR }
+        val brand = k.column(k.text("VI Translator", k.base + 1.5f, k.text, k.heavy), version)
+        savedLabel = k.text("", k.base - 2.5f, k.muted)
+        val globe = k.iconButton(R.drawable.ic_globe, T("App language")) { pickLanguage() }
+        val theme = k.iconButton(if (k.dark) R.drawable.ic_sun else R.drawable.ic_moon, T("Switch between light and dark")) {
+            cfg.put("theme", if (k.dark) "light" else "dark", now = true)
+            Prefs(this).dark = !k.dark
+            recreate()
+        }
+        val top = k.row(logo, brand, k.grow(View(this)), savedLabel, globe, theme, gap = 10)
+
+        modeSetup = modeButton(T("Setup"), R.drawable.ic_setup) { setMode("setup") }
+        modePlay = modeButton(T("Play"), R.drawable.ic_play) { setMode("play") }
+        val modes = k.row(modeSetup, modePlay, gap = 4).apply {
+            background = k.round(k.panel2, 999)
+            setPadding(k.dp(4), k.dp(4), k.dp(4), k.dp(4))
+        }
+        statusDot = View(this).apply {
+            background = k.round(k.muted, 999)
+            layoutParams = LinearLayout.LayoutParams(k.dp(7), k.dp(7))
+        }
+        status = k.text(T("Starting…"), k.base - 1.5f, k.muted, k.bold).apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        val pill = k.row(statusDot, k.grow(status), gap = 7).apply {
+            background = k.round(k.panel2, 999, k.line)
+            setPadding(k.dp(12), k.dp(7), k.dp(14), k.dp(7))
+        }
+        val second = k.row(modes, k.grow(pill), gap = 10)
+
+        // the quick switches (the desktop header's chips)
+        val chips = k.row(
+            chip(T("Overlays"), cfg.bool("overlays_enabled", true)) { cfg.put("overlays_enabled", it) },
+            chip(T("Live translations"), cfg.bool("live_translations", true)) {
+                cfg.put("live_translations", it)
+                panel?.refresh()
+            },
+            chip(T("Preview"), Prefs(this).preview) {
+                Prefs(this).preview = it
+                panel?.refresh()
+                wirePreview()
+            },
+            gap = 8,
+        )
+        val box = k.column(top, k.gap(10), second, k.gap(10), k.hscroll(chips)).apply {
+            setPadding(k.dp(16), k.dp(12), k.dp(16), k.dp(12))
+            setBackgroundColor(k.panel)
+        }
+        // a thin sunset line under the header, like the logo's horizon
+        val horizon = View(this).apply {
+            background = k.sunset(0)
+            alpha = 0.85f
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, k.dp(2))
+        }
+        return k.column(box, horizon)
+    }
+
+    private fun modeButton(label: String, icon: Int, click: () -> Unit) = k.text(label, k.base - 0.5f, k.muted, k.bold).apply {
+        gravity = Gravity.CENTER
+        setPadding(k.dp(14), k.dp(7), k.dp(16), k.dp(7))
+        compoundDrawablePadding = k.dp(6)
+        tag = icon
+        setOnClickListener { click() }
+    }
+
+    private fun chip(label: String, on: Boolean, changed: (Boolean) -> Unit) = k.switch(label, on, small = true, changed = changed).apply {
+        background = k.round(k.panel2, 999, k.line)
+        setPadding(k.dp(13), k.dp(5), k.dp(8), k.dp(5))
+    }
+
+    private fun setMode(m: String) {
+        if (m == mode) return
+        mode = m
+        Prefs(this).lastMode = m
+        showMode()
+    }
+
+    private fun paintMode(v: TextView, on: Boolean) {
+        v.background = if (on) k.sunset(999) else null
+        v.setTextColor(if (on) Color.WHITE else k.muted)
+        v.setCompoundDrawablesRelativeWithIntrinsicBounds(k.tinted(v.tag as Int, if (on) Color.WHITE else k.muted, 15), null, null, null)
+    }
+
+    private fun showMode() {
+        paintMode(modeSetup, mode == "setup")
+        paintMode(modePlay, mode == "play")
+        body.removeAllViews()
+        panel?.close()
+        App.reader?.preview = null
+        if (mode == "play") {
+            open(PlayPanel(this))
+        } else {
+            val content = FrameLayout(this)
+            body.addView(k.column(tabs()).apply {
+                addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
+                layoutParams = FrameLayout.LayoutParams(-1, -1)
+            })
+            openTab(tab, content)
+        }
+    }
+
+    /** The desktop's rail: Source, Show on, Snapshot, Translator, then the profile and its parts. */
+    private val tabList = listOf(
+        Triple("source", "Source", R.drawable.ic_source),
+        Triple("show", "Show on", R.drawable.ic_show),
+        Triple("snapshot", "Snapshot", R.drawable.ic_snapshot),
+        Triple("translator", "Translator", R.drawable.ic_translator),
+        Triple("profile", "Game profile", R.drawable.ic_profile),
+        Triple("areas", "Read areas", R.drawable.ic_areas),
+        Triple("pages", "Game pages", R.drawable.ic_pages),
+    )
+
+    private fun tabs(): View {
+        val strip = k.row(gap = 4).apply { setPadding(k.dp(10), k.dp(8), k.dp(10), k.dp(8)) }
+        for ((id, label, icon) in tabList) {
+            val on = id == tab
+            val lock = (id == "areas" || id == "pages") && cfg.locked()
+            val t = k.text(T(label) + if (lock) " 🔒" else "", k.base - 3f, if (on) k.accentUi else k.muted, k.bold).apply {
+                gravity = Gravity.CENTER
+                setCompoundDrawablesRelativeWithIntrinsicBounds(null, k.tinted(icon, if (on) k.accentUi else k.muted, 20), null, null)
+                compoundDrawablePadding = k.dp(3)
+                setPadding(k.dp(10), k.dp(8), k.dp(10), k.dp(8))
+                minWidth = k.dp(66)
+                background = if (on) k.round(k.accentSoft, 10) else null
+                setOnClickListener {
+                    if (tab != id) {
+                        tab = id
+                        showMode()
+                    }
+                }
+            }
+            strip.addView(t)
+        }
+        val sv = k.hscroll(strip).apply { setBackgroundColor(k.panel) }
+        // (the chosen tab in view)
+        sv.post {
+            val i = tabList.indexOfFirst { it.first == tab }
+            strip.getChildAt(i)?.let { c -> sv.smoothScrollTo(c.left - k.dp(40), 0) }
+        }
+        return k.column(sv, View(this).apply {
+            setBackgroundColor(k.line)
+            layoutParams = LinearLayout.LayoutParams(-1, k.dp(1))
+        })
+    }
+
+    private fun openTab(id: String, into: FrameLayout) {
+        val p = when (id) {
+            "show" -> ShowPanel(this)
+            "snapshot" -> SnapshotPanel(this)
+            "translator" -> TranslatorPanel(this)
+            "profile" -> ProfilePanel(this)
+            "areas" -> AreasPanel(this)
+            "pages" -> PagesPanel(this)
+            else -> SourcePanel(this)
+        }
+        panel = p
+        p.view.setPadding(k.dp(16), k.dp(4), k.dp(16), k.dp(40))
+        into.addView(k.scroll(p.view))
+        p.refresh()
+    }
+
+    private fun open(p: Panel) {
+        panel = p
+        body.addView(k.scroll(p.view.apply { setPadding(k.dp(16), k.dp(14), k.dp(16), k.dp(40)) }), FrameLayout.LayoutParams(-1, -1))
+        p.refresh()
+        wirePreview()
+    }
+
+    // ---- Host
+    override fun go(tab: String) {
+        this.tab = tab
+        mode = "setup"
+        Prefs(this).lastMode = mode
+        showMode()
+    }
+
+    override fun rerender() {
+        if (mode == "setup") showMode() else panel?.refresh()
+    }
+
+    override fun io(block: () -> Unit) {
+        pool.execute(block)
+    }
+
+    override fun ui(block: () -> Unit) {
+        main.post(block)
+    }
+
+    override fun pickLanguage() {
+        k.pick(T("App language"), T.langs.map { it.code to it.name }, T.code) { code ->
+            cfg.put("ui_lang", code, now = true)
+            Prefs(this).uiLanguage = code
+            recreate()
+        }
+    }
+
+    // ---- what's happening
+
     override fun onResume() {
         super.onResume()
         Live.watch(this)
         App.core.setListener(this)
-        refreshConsole()
-        refreshTvs()
-        changed()
-        linesChanged()
         main.post(tick)
         Updater.check(this) { main.post { showUpdate() } }
-        showUpdate()
+        if (loaded) {
+            changed()
+            showUpdate()
+            wirePreview()
+        }
     }
 
     override fun onPause() {
         Live.unwatch(this)
         App.core.setListener(null)
         main.removeCallbacks(tick)
-        stopDiscovery()
+        App.reader?.preview = null
+        cfg.flush()
         super.onPause()
     }
 
     override fun onDestroy() {
-        regist?.dispose()
+        panel?.close()
         super.onDestroy()
     }
 
-    // ---- building the screen
-
-    private fun build() {
-        update = button(R.string.update_available) { Updater.available?.let { r -> Updater.install(this, r) { main.post { showUpdate() } } } }
-        update.visibility = View.GONE
-        root.addView(update)
-        root.addView(row(
-            TextView(this).apply { text = getString(R.string.ui_language) },
-            spinner(Lang.ALL.map { it.name }.let { listOf(getString(R.string.phone_language)) + it }, Lang.ALL.indexOfFirst { it.tag == prefs.uiLanguage } + 1) { i ->
-                val tag = if (i == 0) "" else Lang.ALL[i - 1].tag
-                if (tag != prefs.uiLanguage) {
-                    prefs.uiLanguage = tag
-                    recreate()
-                }
-            },
-        ))
-
-        // 1. the console
-        header(R.string.step_console)
-        psButton = button(R.string.playstation) { choose("ps5") }
-        xboxButton = button(R.string.xbox) { choose("xbox") }
-        root.addView(row(psButton, xboxButton))
-
-        psPanel = column()
-        psStatus = text("")
-        psPanel.addView(psStatus)
-        psPanel.addView(hint(R.string.ps_setup_hint))
-        psPanel.addView(button(R.string.ps_find) { startDiscovery() })
-        psFound = column()
-        psPanel.addView(psFound)
-        psHost = edit(R.string.ps_address, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
-        psPanel.addView(psHost)
-        psPanel.addView(hint(R.string.psn_secondary_hint))
-        psPanel.addView(button(R.string.psn_sign_in) {
-            @Suppress("DEPRECATION")
-            startActivityForResult(Intent(this, PsnLoginActivity::class.java), REQ_PSN)
-        })
-        psAccount = edit(R.string.psn_account_id, InputType.TYPE_CLASS_TEXT)
-        psAccount.setText(Ps5.accountId(this))
-        psPanel.addView(psAccount)
-        psPin = edit(R.string.ps_pin, InputType.TYPE_CLASS_NUMBER)
-        psPanel.addView(psPin)
-        psPanel.addView(row(button(R.string.ps_register) { register() }, button(R.string.ps_wake) { Ps5.saved(this)?.let { if (Chiaki.available) Ps5.wakeup(it) } }))
-        root.addView(psPanel)
-
-        xboxPanel = column()
-        xboxPanel.addView(hint(R.string.xbox_hint))
-        root.addView(xboxPanel)
-
-        // 2. the TVs
-        header(R.string.step_tv)
-        root.addView(hint(R.string.tv_hint))
-        tvList = column()
-        root.addView(tvList)
-        root.addView(button(R.string.tv_find) { findTvs() })
-        tvFound = column()
-        root.addView(tvFound)
-        tvAddress = edit(R.string.tv_address, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
-        tvCode = edit(R.string.tv_code, InputType.TYPE_CLASS_NUMBER)
-        root.addView(tvAddress)
-        root.addView(tvCode)
-        root.addView(button(R.string.tv_connect) { pairTv() })
-        tvStatus = text("")
-        root.addView(tvStatus)
-
-        // 3. the game and the language
-        header(R.string.step_game)
-        val games = App.core.games()
-        val langs = App.core.languages()
-        root.addView(spinner(games.map { it.name }, games.indexOfFirst { it.id == prefs.game }.coerceAtLeast(0)) { prefs.game = games[it].id })
-        root.addView(row(
-            TextView(this).apply { text = getString(R.string.translate_into) },
-            spinner(langs.map { it.name }, langs.indexOfFirst { it.code == prefs.language }.coerceAtLeast(0)) { prefs.language = langs[it].code },
-        ))
-
-        root.addView(TextView(this).apply {
-            text = getString(R.string.service)
-            setPadding(0, dp(10), 0, 0)
-        })
-        val services = Service.entries
-        val serviceNames = resources.getStringArray(R.array.services).toList()
-        serviceKey = edit(R.string.service_key, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        val serviceSpinner = spinner(serviceNames, 0) { i -> serviceKey.visibility = if (services[i].keyName == null) View.GONE else View.VISIBLE }
-        root.addView(serviceSpinner)
-        root.addView(serviceKey)
-        root.addView(hint(R.string.service_hint))
-        root.addView(button(R.string.service_save) {
-            val s = services[serviceSpinner.selectedItemPosition]
-            val k = serviceKey.text.toString()
-            Thread {
-                App.core.setService(s, k)
-                main.post { coreStatus.text = getString(R.string.service_saved) }
-            }.start()
-        })
-        coreStatus = hint("")
-        root.addView(coreStatus)
-        Thread {
-            val (s, k) = App.core.service()
-            main.post {
-                serviceSpinner.setSelection(services.indexOf(s), false)
-                serviceKey.setText(k)
-                serviceKey.visibility = if (s.keyName == null) View.GONE else View.VISIBLE
-            }
-        }.start()
-
-        // 4. start
-        header(R.string.step_start)
-        root.addView(hint(R.string.keep_open_hint))
-        startButton = button(R.string.start) { startOrStop() }
-        root.addView(startButton)
-        status = text("")
-        root.addView(status)
-        stats = text("").apply { textSize = 12f }
-        root.addView(stats)
-
-        // 5. the lines
-        header(R.string.step_lines)
-        lines = column()
-        root.addView(lines)
-        root.addView(hint(getString(R.string.about, App.core.name)))
+    /** The preview gets frames while it is on screen and switched on. */
+    private fun wirePreview() {
+        val p = panel as? PlayPanel
+        App.reader?.preview = if (p != null && Prefs(this).preview) { bmp: Bitmap -> main.post { p.picture(bmp) } } else null
     }
 
-    /**
-     * Debug builds only, for testing on emulators:
-     * adb shell am start -n app.vitranslator.phone/.ui.MainActivity --es advertise 10.0.2.2:8791
-     * (and --es fake_ps5 <address>)
-     */
+    private val tick = object : Runnable {
+        override fun run() {
+            if (loaded) {
+                panel?.tick()
+                if (panel is PlayPanel && App.reader != null && App.reader?.preview == null && Prefs(this@MainActivity).preview) wirePreview()
+            }
+            main.postDelayed(this, 1000)
+        }
+    }
+
+    override fun changed() {
+        if (!loaded) return
+        val (txt, color) = when (Live.state) {
+            Live.State.IDLE -> (coreStatus ?: T("Ready")) to k.muted
+            Live.State.STARTING -> T("Starting…") to k.warn
+            Live.State.CONNECTING -> T("Connecting to the PS5…") to k.warn
+            Live.State.READING -> (coreStatus ?: T("Translating")) to k.ok
+            Live.State.ENDED -> (T("Stopped") + (Live.detail?.let { " ($it)" } ?: "")) to k.muted
+            Live.State.FAILED -> T("Stopped: {reason}", "reason" to (Live.detail ?: "")) to k.err
+        }
+        status.text = txt
+        status.setTextColor(if (Live.state == Live.State.FAILED) k.err else k.text)
+        statusDot.background = k.round(color, 999)
+        if (Live.state == Live.State.READING) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        panel?.refresh()
+    }
+
+    override fun askPin(incorrect: Boolean) {
+        val e = k.input("", T("Passcode"), password = true) {}
+        val d = android.app.Dialog(this)
+        d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        d.setContentView(
+            k.card(
+                18,
+                k.text(T(if (incorrect) "Wrong passcode: try again" else "The PS5 asks for the account's passcode"), k.base + 0.5f),
+                k.gap(12), e, k.gap(12),
+                k.button(T("OK"), primary = true) {
+                    TranslateService.instance?.pin(e.text.toString())
+                    d.dismiss()
+                },
+            ),
+        )
+        d.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+        d.show()
+    }
+
+    override fun linesChanged() {
+        main.post { if (loaded) panel?.lines() }
+    }
+
+    override fun status(message: String) {
+        main.post {
+            coreStatus = message.ifBlank { null }
+            changed()
+        }
+    }
+
+    private fun showUpdate() {
+        if (!loaded) return
+        val r = Updater.available
+        updateBar.removeAllViews()
+        updateBar.visibility = if (r != null) View.VISIBLE else View.GONE
+        if (r == null) return
+        val text = when (Updater.state) {
+            Updater.State.DOWNLOADING -> T("Downloading the update…")
+            Updater.State.INSTALLING -> T("Installing…")
+            Updater.State.FAILED -> T("The update failed: try again")
+            Updater.State.IDLE -> T("Version {v} is available.", "v" to r.version)
+        }
+        updateBar.addView(k.grow(k.text(text, k.base - 1f)))
+        updateBar.addView(k.button(T("Update now"), primary = true) { Updater.install(this, r) { main.post { showUpdate() } } })
+    }
+
+    // ---- debug builds, for emulators: --es advertise 10.0.2.2:8791 (the stand-in core), --es fake_ps5 <address>, --es mode, --es tab
     private fun debugOptions(i: Intent?) {
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) return
         i?.getStringExtra("advertise")?.let { a -> (App.core as? app.vitranslator.phone.core.StubCore)?.advertise = a }
-        // --es fake_ps5 10.0.2.2: a PS5 "linked" with made-up keys, to try the stream's setup
         i?.getStringExtra("fake_ps5")?.let { host ->
-            Ps5.save(this, app.vitranslator.phone.ps.PsConsole(host, "fake PS5", ByteArray(6), "0123abcd".toByteArray() + ByteArray(8), ByteArray(16)))
-            refreshConsole()
+            app.vitranslator.phone.ps.Ps5.save(this, app.vitranslator.phone.ps.PsConsole(host, "fake PS5", ByteArray(6), "0123abcd".toByteArray() + ByteArray(8), ByteArray(16)))
+            panel?.refresh()
         }
+        i?.getStringExtra("mode")?.let { setMode(it) }
+        i?.getStringExtra("tab")?.let { go(it) }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        debugOptions(intent)
-    }
-
-    // ---- 1. the console
-
-    private fun choose(console: String) {
-        prefs.console = console
-        refreshConsole()
-    }
-
-    private fun refreshConsole() {
-        val c = prefs.console
-        psButton.isSelected = c == "ps5"
-        xboxButton.isSelected = c == "xbox"
-        psButton.alpha = if (c == "ps5") 1f else 0.6f
-        xboxButton.alpha = if (c == "xbox") 1f else 0.6f
-        psPanel.visibility = if (c == "ps5") View.VISIBLE else View.GONE
-        xboxPanel.visibility = if (c == "xbox") View.VISIBLE else View.GONE
-        val saved = Ps5.saved(this)
-        psStatus.text = when {
-            !Chiaki.available -> getString(R.string.ps_not_in_build)
-            saved != null -> getString(R.string.ps_registered, saved.nickname.ifEmpty { "PS5" }, saved.host)
-            else -> getString(R.string.ps_not_registered)
-        }
-        if (saved != null && psHost.text.isEmpty()) psHost.setText(saved.host)
-    }
-
-    private fun startDiscovery() {
-        if (!Chiaki.available) return
-        stopDiscovery()
-        psFound.removeAllViews()
-        psFound.addView(hint(R.string.searching))
-        discovery = Ps5.discover { hosts -> main.post { showPs(hosts) } }
-        main.postDelayed({ stopDiscovery() }, 15000)
-    }
-
-    private fun stopDiscovery() {
-        discovery?.dispose()
-        discovery = null
-    }
-
-    private fun showPs(hosts: List<DiscoveryHost>) {
-        psFound.removeAllViews()
-        for (h in hosts) {
-            val addr = h.hostAddr ?: continue
-            val state = getString(if (h.state == DiscoveryHost.State.STANDBY) R.string.ps_standby else R.string.ps_ready)
-            psFound.addView(button("${h.hostName ?: "PS5"} · $addr · $state") { psHost.setText(addr) })
-        }
-    }
-
-    private fun register() {
-        if (!Chiaki.available) return
-        val host = psHost.text.toString().trim()
-        val account = psAccount.text.toString().trim()
-        val pin = psPin.text.toString().trim()
-        if (host.isEmpty() || account.isEmpty() || !Regex("\\d{8}").matches(pin)) {
-            psStatus.text = getString(R.string.ps_register_missing)
-            return
-        }
-        Ps5.saveAccountId(this, account)
-        psStatus.text = getString(R.string.ps_registering)
-        regist?.dispose()
-        regist = Ps5.register(host, account, pin.toInt(), { line -> android.util.Log.i("Regist", line) }) { console ->
-            main.post {
-                if (console != null) {
-                    Ps5.save(this, console)
-                    psPin.setText("")
-                    refreshConsole()
-                } else {
-                    psStatus.text = getString(R.string.ps_register_failed)
-                }
-            }
-        }
+        if (loaded) debugOptions(intent)
     }
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQ_PSN) return
-        val id = data?.getStringExtra(PsnLoginActivity.EXTRA_ACCOUNT_ID)
-        if (resultCode == RESULT_OK && id != null) {
-            psAccount.setText(id)
-            Ps5.saveAccountId(this, id)
-        } else if (data?.getStringExtra(PsnLoginActivity.EXTRA_ERROR) != null) {
-            psStatus.text = getString(R.string.psn_failed, data.getStringExtra(PsnLoginActivity.EXTRA_ERROR))
+        panel?.result(requestCode, resultCode, data)
+    }
+}
+
+/** What the panels get from the screen around them. */
+interface Host {
+    val k: Kit
+    val cfg: Cfg
+    val act: Activity
+
+    /** to a Setup tab */
+    fun go(tab: String)
+
+    /** draw the panel (or the whole Setup) again */
+    fun rerender()
+
+    fun io(block: () -> Unit)
+    fun ui(block: () -> Unit)
+    fun pickLanguage()
+}
+
+/** A screen's content: its view, drawn again on [refresh]. */
+abstract class Panel(val h: Host) {
+    val k get() = h.k
+    val cfg get() = h.cfg
+    val view: LinearLayout = LinearLayout(h.act).apply { orientation = LinearLayout.VERTICAL }
+
+    /** the settings or the state changed: show them */
+    open fun refresh() {}
+
+    /** every second while on screen */
+    open fun tick() {}
+
+    /** the lines read and translated changed */
+    open fun lines() {}
+
+    open fun result(requestCode: Int, resultCode: Int, data: Intent?) {}
+    open fun close() {}
+
+    fun add(v: View) = view.addView(v)
+
+    /** a locked built-in profile's note, with "Make a copy" (the desktop's .lock-note) */
+    fun lockNote(): View? {
+        if (!cfg.locked()) return null
+        val p = cfg.activeProfile() ?: return null
+        return k.row(
+            k.icon(R.drawable.ic_lock, k.accentUi, 18),
+            k.grow(k.text(T("“{name}” is built in and can't be changed.", "name" to p.optString("name")), k.base - 1f, k.text, k.bold)),
+            k.button(T("Make a copy"), primary = true) {
+                cfg.copyProfile(cfg.activeProfile()!!)
+                h.rerender()
+            },
+            gap = 10,
+        ).apply {
+            background = k.round(k.accentSoft, 12, k.accentUi)
+            setPadding(k.dp(12), k.dp(10), k.dp(10), k.dp(10))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = k.dp(12) }
         }
-    }
-
-    // ---- 2. the TVs
-
-    private fun refreshTvs() {
-        Thread {
-            val tvs = App.core.pairedTvs()
-            main.post {
-                tvList.removeAllViews()
-                if (tvs.isEmpty()) tvList.addView(hint(R.string.tv_none))
-                for (tv in tvs) tvList.addView(row(text("📺 ${tv.name}" + if (tv.address.isEmpty()) "" else " · ${tv.address}"), button(R.string.tv_forget) { forget(tv) }))
-            }
-        }.start()
-    }
-
-    private fun forget(tv: Tv) {
-        Thread {
-            App.core.forgetTv(tv.id)
-            main.post { refreshTvs() }
-        }.start()
-    }
-
-    private fun findTvs() {
-        tvFound.removeAllViews()
-        tvFound.addView(hint(R.string.searching))
-        Thread {
-            val tvs = App.core.findTvs()
-            main.post {
-                tvFound.removeAllViews()
-                if (tvs.isEmpty()) tvFound.addView(hint(R.string.tv_found_none))
-                for (tv in tvs) tvFound.addView(button("${tv.name} · ${tv.address}") {
-                    tvAddress.setText(tv.address)
-                    tvCode.requestFocus()
-                })
-            }
-        }.start()
-    }
-
-    private fun pairTv() {
-        val address = tvAddress.text.toString().trim()
-        val code = tvCode.text.toString().trim()
-        if (address.isEmpty() || !Regex("\\d{6}").matches(code)) {
-            tvStatus.text = getString(R.string.tv_missing)
-            return
-        }
-        tvStatus.text = getString(R.string.tv_connecting)
-        Thread {
-            val r = App.core.pairTv(address, code)
-            main.post {
-                tvStatus.text = getString(
-                    when (r) {
-                        PairResult.OK -> R.string.tv_connected
-                        PairResult.WRONG_CODE -> R.string.tv_wrong_code
-                        PairResult.NEW_CODE -> R.string.tv_new_code
-                        PairResult.UNREACHABLE -> R.string.tv_unreachable
-                        PairResult.NOT_SHARING -> R.string.tv_not_sharing
-                    },
-                )
-                if (r == PairResult.OK) {
-                    tvCode.setText("")
-                    tvFound.removeAllViews()
-                    refreshTvs()
-                }
-            }
-        }.start()
-    }
-
-    // ---- 4. start
-
-    private fun running() = Live.state in listOf(Live.State.STARTING, Live.State.CONNECTING, Live.State.READING)
-
-    private fun startOrStop() {
-        if (running()) {
-            TranslateService.stop(this)
-            return
-        }
-        when (prefs.console) {
-            "ps5" -> TranslateService.start(this, TranslateService.Source.PS5)
-            "xbox" -> XboxActivity.open(this)
-            else -> status.text = getString(R.string.choose_console)
-        }
-    }
-
-    override fun changed() {
-        startButton.text = getString(if (running()) R.string.stop else R.string.start)
-        val d = Live.detail
-        status.text = when (Live.state) {
-            Live.State.IDLE -> ""
-            Live.State.STARTING -> getString(R.string.state_starting)
-            Live.State.CONNECTING -> getString(R.string.state_connecting)
-            Live.State.READING -> getString(R.string.state_reading)
-            Live.State.ENDED -> getString(R.string.state_ended) + (d?.let { " ($it)" } ?: "")
-            Live.State.FAILED -> getString(R.string.state_failed, d ?: "")
-        }
-    }
-
-    override fun askPin(incorrect: Boolean) {
-        val e = EditText(this).apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD }
-        AlertDialog.Builder(this)
-            .setTitle(if (incorrect) R.string.ps_login_pin_wrong else R.string.ps_login_pin)
-            .setView(e)
-            .setPositiveButton(android.R.string.ok) { _, _ -> TranslateService.instance?.pin(e.text.toString()) }
-            .show()
-    }
-
-    /** Frames counted, twice a second, while translating. */
-    private val tick = object : Runnable {
-        override fun run() {
-            val r = App.reader
-            stats.text = if (r != null && running()) getString(R.string.stats, r.read, r.offered, r.lastMs, r.frameSize) else ""
-            main.postDelayed(this, 500)
-        }
-    }
-
-    // ---- 5. the lines
-
-    override fun status(message: String) {
-        main.post { coreStatus.text = message }
-    }
-
-    override fun linesChanged() {
-        main.post {
-            val ls = App.core.lines(30).asReversed()
-            lines.removeAllViews()
-            if (ls.isEmpty()) lines.addView(hint(R.string.lines_none))
-            val rtl = App.core.languages().firstOrNull { it.code == prefs.language }?.rtl ?: false
-            for (l in ls) {
-                lines.addView(text(l.original).apply {
-                    textSize = 13f
-                    alpha = 0.7f
-                    textDirection = View.TEXT_DIRECTION_LTR
-                })
-                lines.addView(text(l.translated).apply {
-                    textSize = 17f
-                    textDirection = if (rtl) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_LTR
-                    setPadding(0, 0, 0, dp(10))
-                })
-            }
-        }
-    }
-
-    // ---- updates
-
-    private fun showUpdate() {
-        val r = Updater.available
-        update.visibility = if (r != null) View.VISIBLE else View.GONE
-        if (r != null) {
-            update.text = when (Updater.state) {
-                Updater.State.DOWNLOADING -> getString(R.string.update_downloading)
-                Updater.State.INSTALLING -> getString(R.string.update_installing)
-                Updater.State.FAILED -> getString(R.string.update_failed)
-                Updater.State.IDLE -> getString(R.string.update_to, r.version)
-            }
-        }
-    }
-
-    // ---- small helpers
-
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-
-    private fun header(id: Int) {
-        root.addView(TextView(this).apply {
-            text = getString(id)
-            textSize = 18f
-            setTypeface(typeface, Typeface.BOLD)
-            setPadding(0, dp(20), 0, dp(6))
-        })
-    }
-
-    private fun text(s: String) = TextView(this).apply {
-        text = s
-        textSize = 15f
-    }
-
-    private fun hint(id: Int) = hint(getString(id))
-
-    private fun hint(s: String) = TextView(this).apply {
-        text = s
-        textSize = 13f
-        alpha = 0.75f
-        setPadding(0, dp(2), 0, dp(6))
-    }
-
-    private fun column() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-
-    private fun row(vararg views: View) = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        for (v in views) addView(v, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-    }
-
-    private fun button(id: Int, click: () -> Unit) = button(getString(id), click)
-
-    private fun button(s: String, click: () -> Unit) = Button(this).apply {
-        text = s
-        isAllCaps = false
-        setOnClickListener { click() }
-    }
-
-    private fun edit(hintId: Int, type: Int) = EditText(this).apply {
-        hint = getString(hintId)
-        inputType = type
-        isSingleLine = true
-    }
-
-    private fun spinner(items: List<String>, selected: Int, picked: (Int) -> Unit) = Spinner(this).apply {
-        adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, items)
-        setSelection(selected.coerceAtLeast(0), false)
-        onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = picked(position)
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-    }
-
-    companion object {
-        private const val REQ_PSN = 1
     }
 }

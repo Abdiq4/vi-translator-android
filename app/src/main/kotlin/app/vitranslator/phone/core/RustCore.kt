@@ -56,7 +56,7 @@ class RustCore(context: Context, recognizer: Recognizer) : Core {
 
     override fun games(): List<Game> = engine.games().map { Game(it.id, it.name) }
 
-    override fun languages(): List<Language> = coreLanguages().map { Language(it.code, it.native.ifEmpty { it.name }, it.rtl) }
+    override fun languages(): List<Language> = coreLanguages().map { Language(it.code, it.native.ifEmpty { it.name }, it.rtl, it.name) }
 
     override fun prepare(game: String, language: String) {
         try {
@@ -91,6 +91,22 @@ class RustCore(context: Context, recognizer: Recognizer) : Core {
         if (service.keyName != null) patch.put(service.keyName, key.trim())
         engine.updateConfig(patch.toString())
     }
+
+    override fun configJson(): String = engine.configJson()
+
+    override fun updateConfig(patch: String) {
+        try {
+            engine.updateConfig(patch)
+        } catch (e: FfiCoreException) {
+            throw CoreException(e.message ?: e.toString())
+        }
+    }
+
+    override fun memoryStatsJson(): String = engine.memoryStatsJson()
+
+    override fun perfJson(): String = engine.perfJson()
+
+    override val coreVersion: String = coreVersion()
 
     override fun startServer(): Int = engine.startTvServer(PORT.toUShort()).toInt()
 
