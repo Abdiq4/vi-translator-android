@@ -78,6 +78,12 @@ class SourcePanel(h: Host) : Panel(h) {
         ).apply { layoutParams = lp(12) }
         psStatus = st
         add(st)
+        if (saved != null) add(k.link(T("Unlink this PS5")) {
+            k.ask(T("Unlink {name}? To use it again, link it with a new PIN.", "name" to saved.nickname.ifEmpty { "PS5" }), T("Unlink")) {
+                Ps5.save(h.act, null)
+                refresh()
+            }
+        })
         add(k.muted(T("Set it up once: on the PS5, Settings › System › Remote Play › Link Device shows a PIN."), small = true).apply { setPadding(0, k.dp(8), 0, 0) })
         add(k.button(T("Find the PS5"), icon = R.drawable.ic_refresh) { startDiscovery() }.apply { layoutParams = lp(10) })
         found.removeAllViews()

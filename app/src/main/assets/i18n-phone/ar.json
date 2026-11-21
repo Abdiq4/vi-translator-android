@@ -86,5 +86,8 @@
  "Sign out of Microsoft": "تسجيل الخروج من Microsoft",
  "Sign out of Microsoft in the Xbox player?": "تسجيل الخروج من Microsoft في مشغّل Xbox؟",
  "Sign out": "تسجيل الخروج",
- "While translating, the app copies the player's picture to read it. If the copies come out black on your phone, the player offers to capture the screen instead (Android asks you to allow it).": "أثناء الترجمة ينسخ التطبيق صورة المشغّل ليقرأها. إن ظهرت النسخ سوداء على هاتفك، يعرض المشغّل التقاط الشاشة بدلًا من ذلك (ويطلب Android إذنك)."
+ "While translating, the app copies the player's picture to read it. If the copies come out black on your phone, the player offers to capture the screen instead (Android asks you to allow it).": "أثناء الترجمة ينسخ التطبيق صورة المشغّل ليقرأها. إن ظهرت النسخ سوداء على هاتفك، يعرض المشغّل التقاط الشاشة بدلًا من ذلك (ويطلب Android إذنك).",
+ "Unlink this PS5": "إلغاء ربط جهاز PS5 هذا",
+ "Unlink {name}? To use it again, link it with a new PIN.": "إلغاء ربط {name}؟ لاستخدامه مجددًا اربطه برمز PIN جديد.",
+ "Unlink": "إلغاء الربط"
 }
