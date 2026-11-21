@@ -88,7 +88,10 @@ class SourcePanel(h: Host) : Panel(h) {
         add(k.button(T("Find the PS5"), icon = R.drawable.ic_refresh) { startDiscovery() }.apply { layoutParams = lp(10) })
         found.removeAllViews()
         add(found)
-        host = k.input(saved?.host ?: "", "192.168.1.20", ltr = true) {}
+        // (the address typed is kept, linked or not)
+        host = k.input(saved?.host ?: h.act.getSharedPreferences("ps5", android.content.Context.MODE_PRIVATE).getString("address", "") ?: "", "192.168.1.20", ltr = true) {
+            h.act.getSharedPreferences("ps5", android.content.Context.MODE_PRIVATE).edit().putString("address", it.trim()).apply()
+        }
         add(k.field(T("PS5 address"), host!!))
         add(k.callout(T("Sign in with a second PSN account, not the one you play with: Remote Play signs it in on the PS5. Only its account ID is kept."), k.warn).apply { layoutParams = lp(12) })
         add(k.button(T("Sign in to PSN")) {
@@ -239,6 +242,7 @@ class SourcePanel(h: Host) : Panel(h) {
         val p = pin?.text.toString().trim()
         if (addr.isEmpty() || acc.isEmpty() || !Regex("\\d{8}").matches(p)) {
             psStatus?.text = T("Fill in the PS5's address, the account ID and the 8-digit PIN.")
+            android.widget.Toast.makeText(h.act, psStatus?.text, android.widget.Toast.LENGTH_LONG).show()
             return
         }
         Ps5.saveAccountId(h.act, acc)
@@ -251,6 +255,7 @@ class SourcePanel(h: Host) : Panel(h) {
                     refresh()
                 } else {
                     psStatus?.text = T("The PS5 refused: check the PIN (it changes every few minutes) and that Remote Play is on.")
+                    android.widget.Toast.makeText(h.act, psStatus?.text, android.widget.Toast.LENGTH_LONG).show()
                     psStatus?.setTextColor(k.err)
                 }
             }
