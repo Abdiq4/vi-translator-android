@@ -95,6 +95,7 @@ class SourcePanel(h: Host) : Panel(h) {
             @Suppress("DEPRECATION")
             h.act.startActivityForResult(Intent(h.act, PsnLoginActivity::class.java), REQ_PSN)
         }.apply { layoutParams = lp(10) })
+        add(k.link(T("Signed in with a browser? Paste the address it ended on")) { pasteAddress() })
         // (kept as typed, or cleared: not only when linking)
         account = k.input(Ps5.accountId(h.act), "", ltr = true) { Ps5.saveAccountId(h.act, it.trim()) }
         add(k.field(T("PSN account ID"), account!!))
@@ -148,6 +149,65 @@ class SourcePanel(h: Host) : Panel(h) {
     }
 
     private var lastSigned: Boolean? = null
+
+    /**
+     * Sony's sign-in in a browser instead of in the app (its bot check sometimes refuses the app's):
+     * the browser ends on remoteplay.dl.playstation.net/remoteplay/redirect?code=…; that address
+     * pasted here gives the account ID (the code is used once, within a few minutes).
+     */
+    private fun pasteAddress() {
+        val e = k.input("", "https://remoteplay.dl.playstation.net/remoteplay/redirect?code=…", ltr = true) {}
+        val msg = k.muted("", small = true)
+        val link = app.vitranslator.phone.ps.Psn.loginUrl
+        var d: android.app.Dialog? = null
+        d = k.dialog(k.card(18,
+            k.text(T("Sign in with a browser"), k.base + 0.5f, k.text, k.bold),
+            k.muted(T("1. Open Sony's sign-in in a browser (on this phone or a PC) and sign in with your second PSN account."), small = true).apply { setPadding(0, k.dp(8), 0, 0) },
+            k.row(
+                k.grow(k.button(T("Open in the browser")) {
+                    try {
+                        h.act.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link)))
+                    } catch (ex: Exception) {
+                        msg.text = ex.message
+                    }
+                }),
+                k.grow(k.button(T("Copy the link")) {
+                    val cm = h.act.getSystemService(android.content.ClipboardManager::class.java)
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("PSN", link))
+                    msg.text = T("Copied.")
+                }),
+            ).apply { setPadding(0, k.dp(8), 0, 0) },
+            k.muted(T("2. It ends on a page whose address starts with https://remoteplay.dl.playstation.net (the page itself may be blank). Copy that address and paste it here:"), small = true).apply { setPadding(0, k.dp(12), 0, k.dp(6)) },
+            e, msg, k.gap(10),
+            k.button(T("Get the account ID"), primary = true) {
+                val text = e.text.toString().trim()
+                val code = Regex("[?&]code=([^&#\\s]+)").find(text)?.groupValues?.get(1)
+                if (code == null) {
+                    msg.text = T("That address has no sign-in code: copy the whole address of the page you ended on.")
+                    return@button
+                }
+                msg.text = T("Getting the account ID…")
+                h.io {
+                    val r = try {
+                        app.vitranslator.phone.ps.Psn.accountId(android.net.Uri.decode(code)) to null
+                    } catch (ex: Exception) {
+                        null to (ex.message ?: ex.toString())
+                    }
+                    h.ui {
+                        val id = r.first
+                        if (id != null) {
+                            Ps5.saveAccountId(h.act, id)
+                            account?.setText(id)
+                            d?.dismiss()
+                        } else {
+                            msg.text = T("PSN sign-in didn't work: {e}", "e" to (r.second ?: "")) + "\n" + T("The code works once and only for a few minutes: sign in again and paste the new address.")
+                        }
+                    }
+                }
+            },
+        ))
+        d.show()
+    }
 
     private fun startDiscovery() {
         if (!Chiaki.available) return

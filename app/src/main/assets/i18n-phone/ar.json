@@ -89,5 +89,16 @@
  "While translating, the app copies the player's picture to read it. If the copies come out black on your phone, the player offers to capture the screen instead (Android asks you to allow it).": "أثناء الترجمة ينسخ التطبيق صورة المشغّل ليقرأها. إن ظهرت النسخ سوداء على هاتفك، يعرض المشغّل التقاط الشاشة بدلًا من ذلك (ويطلب Android إذنك).",
  "Unlink this PS5": "إلغاء ربط جهاز PS5 هذا",
  "Unlink {name}? To use it again, link it with a new PIN.": "إلغاء ربط {name}؟ لاستخدامه مجددًا اربطه برمز PIN جديد.",
- "Unlink": "إلغاء الربط"
+ "Unlink": "إلغاء الربط",
+ "Signed in with a browser? Paste the address it ended on": "سجّلت الدخول من متصفح؟ الصق عنوان الصفحة التي انتهى إليها",
+ "Sign in with a browser": "تسجيل الدخول من متصفح",
+ "1. Open Sony's sign-in in a browser (on this phone or a PC) and sign in with your second PSN account.": "1. افتح صفحة تسجيل الدخول من Sony في متصفح (على هذا الهاتف أو على حاسوب) وسجّل الدخول بحساب PSN الثاني.",
+ "Open in the browser": "افتح في المتصفح",
+ "Copy the link": "انسخ الرابط",
+ "Copied.": "تم النسخ.",
+ "2. It ends on a page whose address starts with https://remoteplay.dl.playstation.net (the page itself may be blank). Copy that address and paste it here:": "2. ينتهي إلى صفحة يبدأ عنوانها بـ https://remoteplay.dl.playstation.net (قد تكون الصفحة فارغة). انسخ ذلك العنوان والصقه هنا:",
+ "Get the account ID": "احصل على معرّف الحساب",
+ "That address has no sign-in code: copy the whole address of the page you ended on.": "لا يحتوي هذا العنوان على رمز تسجيل الدخول: انسخ العنوان كاملًا للصفحة التي انتهيت إليها.",
+ "Getting the account ID…": "جارٍ الحصول على معرّف الحساب…",
+ "The code works once and only for a few minutes: sign in again and paste the new address.": "يعمل الرمز مرة واحدة ولبضع دقائق فقط: سجّل الدخول مجددًا والصق العنوان الجديد."
 }
