@@ -100,6 +100,12 @@ class PsnLoginActivity : Activity() {
         web = WebView(this)
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
+        // Sony's sign-in page talks to its account servers on another domain, with their cookies
+        // (blocked in a WebView by default: "can't connect to the server" at Sign In)
+        android.webkit.CookieManager.getInstance().setAcceptCookie(true)
+        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
+        // and as the phone's Chrome, not as a WebView (" wv", "Version/4.0"), which Sony's checks may refuse
+        web.settings.userAgentString = web.settings.userAgentString.replace("; wv)", ")").replace(Regex(" Version/[0-9.]+"), "")
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = caught(request.url)
 
