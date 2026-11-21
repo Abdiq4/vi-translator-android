@@ -2,6 +2,7 @@
 #   vi-translator-android-X.Y.Z.apk   signed APK, installed directly (the app updates itself from these)
 #   vi-translator-android-latest.apk  the same APK: .../releases/latest/download/vi-translator-android-latest.apk
 #                                     always serves the newest one
+#   vi-translator-android-X.Y.Z.aab   signed app bundle, to upload to Google Play (the key is Play's upload key)
 #
 # The tag must look like v1.2.3 and be newer than the latest release.
 #
@@ -116,7 +117,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon testDebugUnitTest assembleRelease -PrequireNative -Pversion="$VERSION"
+        run: ./gradlew --no-daemon testDebugUnitTest assembleRelease bundleRelease -PrequireNative -Pversion="$VERSION"
 
       - name: Check the signature and name the files
         run: |
@@ -125,7 +126,12 @@ jobs:
           "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -n1)/apksigner verify --print-certs "$APK"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libchiaki-jni.so" || { echo "::error::the APK has no PS Remote Play library"; exit 1; }
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libvi_translator_ffi.so" || { echo "::error::the APK has no translation core"; exit 1; }
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          [ -f "$AAB" ] || { echo "::error::no app bundle"; ls -R app/build/outputs; exit 1; }
+          jarsigner -verify "$AAB" | grep -q "^jar verified" || { echo "::error::the app bundle isn't signed"; exit 1; }
+          unzip -l "$AAB" | grep -q "base/lib/arm64-v8a/libchiaki-jni.so" || { echo "::error::the app bundle has no PS Remote Play library"; exit 1; }
           mkdir -p out
+          cp "$AAB" "out/vi-translator-android-$VERSION.aab"
           cp "$APK" "out/vi-translator-android-$VERSION.apk"
           cp "$APK" "out/vi-translator-android-latest.apk"
           rm -f "$ANDROID_KEYSTORE"
