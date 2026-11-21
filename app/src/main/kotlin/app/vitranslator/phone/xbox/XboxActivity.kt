@@ -49,6 +49,7 @@ class XboxActivity : Activity() {
     private var bitmap: Bitmap? = null
     private var running = false
     private var black = 0
+    private var setupOnly = false
 
     @Volatile
     private var loaded = false
@@ -124,7 +125,9 @@ class XboxActivity : Activity() {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { back() }
         }
         if (savedInstanceState == null) web.loadUrl(URL) else web.restoreState(savedInstanceState)
-        TranslateService.start(this, TranslateService.Source.XBOX)
+        // (opened from Setup only to sign in and choose the console: nothing is read or translated)
+        setupOnly = intent.getBooleanExtra(EXTRA_SETUP, false)
+        if (setupOnly) status.text = getString(R.string.xbox_setup_status) else TranslateService.start(this, TranslateService.Source.XBOX)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -136,7 +139,7 @@ class XboxActivity : Activity() {
         super.onResume()
         web.onResume()
         running = true
-        capture.post(tick)
+        if (!setupOnly) capture.post(tick)
     }
 
     override fun onPause() {
@@ -263,8 +266,33 @@ class XboxActivity : Activity() {
             return true
         }
 
+        private const val EXTRA_SETUP = "setup"
+
+        /** The player, to play and translate. */
         fun open(c: Context) {
             c.startActivity(Intent(c, XboxActivity::class.java))
+        }
+
+        /** The player only to sign in and choose the console (Setup): nothing is read. */
+        fun openForSetup(c: Context) {
+            c.startActivity(Intent(c, XboxActivity::class.java).putExtra(EXTRA_SETUP, true))
+        }
+
+        /**
+         * Signed in to Microsoft in the player, as far as the app can tell: Microsoft's sign-in keeps
+         * its "stay signed in" cookies on login.live.com (the player itself keeps its session in its
+         * own storage, which the app can't read).
+         */
+        fun signedIn(): Boolean {
+            val c = android.webkit.CookieManager.getInstance().getCookie("https://login.live.com") ?: return false
+            return listOf("MSPAuth", "WLSSC", "ESTSAUTHPERSISTENT").any { c.contains("$it=") }
+        }
+
+        /** Forget the Microsoft sign-in and the player's saved session (cookies and its storage). */
+        fun signOut() {
+            android.webkit.CookieManager.getInstance().removeAllCookies(null)
+            android.webkit.CookieManager.getInstance().flush()
+            android.webkit.WebStorage.getInstance().deleteAllData()
         }
     }
 }

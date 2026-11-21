@@ -73,5 +73,18 @@
  "on": "يعمل",
  "Free": "مجاني",
  "Not connected now (the TV is off, or VI Translator isn't open on it)": "غير متصل الآن (الشاشة مطفأة، أو VI Translator غير مفتوح عليها)",
- "Showing the translations": "يعرض الترجمات"
+ "Showing the translations": "يعرض الترجمات",
+ "Signed in to Microsoft in the Xbox player.": "تم تسجيل الدخول إلى Microsoft في مشغّل Xbox.",
+ "Not signed in to the Xbox player yet.": "لم يُسجَّل الدخول إلى مشغّل Xbox بعد.",
+ "On the Xbox, once": "على جهاز Xbox، مرة واحدة",
+ "Settings › Devices & connections › Remote features: turn on Enable remote features.": "الإعدادات › الأجهزة والاتصالات › الميزات عن بُعد: فعّل «تمكين الميزات عن بُعد».",
+ "Settings › General › Power options: choose Sleep, so the player can wake the console.": "الإعدادات › عام › خيارات الطاقة: اختر «السكون» ليتمكن المشغّل من إيقاظ الجهاز.",
+ "Sign in on the Xbox with the same Microsoft account as in the player.": "سجّل الدخول على Xbox بحساب Microsoft نفسه المستخدم في المشغّل.",
+ "In the app": "في التطبيق",
+ "Open the player, sign in with your Microsoft account and choose your Xbox under Remote play. The sign-in stays in the app: next time, Start translating goes straight to the game.": "افتح المشغّل، وسجّل الدخول بحساب Microsoft، واختر جهاز Xbox من «التشغيل عن بُعد». يبقى تسجيل الدخول محفوظًا في التطبيق: في المرة القادمة يأخذك «ابدأ الترجمة» إلى اللعبة مباشرة.",
+ "Open the Xbox player": "افتح مشغّل Xbox",
+ "Sign out of Microsoft": "تسجيل الخروج من Microsoft",
+ "Sign out of Microsoft in the Xbox player?": "تسجيل الخروج من Microsoft في مشغّل Xbox؟",
+ "Sign out": "تسجيل الخروج",
+ "While translating, the app copies the player's picture to read it. If the copies come out black on your phone, the player offers to capture the screen instead (Android asks you to allow it).": "أثناء الترجمة ينسخ التطبيق صورة المشغّل ليقرأها. إن ظهرت النسخ سوداء على هاتفك، يعرض المشغّل التقاط الشاشة بدلًا من ذلك (ويطلب Android إذنك)."
 }

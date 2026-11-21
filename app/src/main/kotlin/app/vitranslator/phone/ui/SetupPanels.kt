@@ -43,7 +43,7 @@ class SourcePanel(h: Host) : Panel(h) {
         add(k.gap(8))
         add(consoleChoice("xbox", "Xbox", T("Microsoft's Remote Play player, in the app. Keep the phone's screen on while playing."), prefs.console == "xbox"))
         if (prefs.console == "ps5") ps5Setup()
-        if (prefs.console == "xbox") add(k.callout(T("Start translating opens Microsoft's Remote Play player here. Sign in there with your Microsoft account and connect to your Xbox.")).apply { setPadding(k.dp(12), k.dp(10), k.dp(12), k.dp(10)); layoutParams = lp(12) })
+        if (prefs.console == "xbox") xboxSetup()
         add(k.h3(T("Timing")))
         timing()
     }
@@ -98,6 +98,49 @@ class SourcePanel(h: Host) : Panel(h) {
         add(k.field(T("Stream quality"), k.select(listOf("1080" to "1080p", "720" to "720p"), prefs.psResolution.toString()) { prefs.psResolution = it.toInt() },
             T("1080p reads small text best; 720p for a slower home network.")))
     }
+
+    /**
+     * The Xbox: nothing to link in the app. Microsoft's player (in the app) signs in with the
+     * Microsoft account and connects to the console itself; the console only needs its remote
+     * features on. Signing in here first makes Start go straight to the game.
+     */
+    private fun xboxSetup() {
+        val signed = app.vitranslator.phone.xbox.XboxActivity.signedIn()
+        add(k.callout(
+            if (signed) T("Signed in to Microsoft in the Xbox player.") else T("Not signed in to the Xbox player yet."),
+            if (signed) k.ok else null,
+        ).apply { layoutParams = lp(12) })
+        add(k.label(T("On the Xbox, once")).apply { setPadding(0, k.dp(14), 0, k.dp(4)) })
+        add(k.muted("1. " + T("Settings › Devices & connections › Remote features: turn on Enable remote features.")))
+        add(k.muted("2. " + T("Settings › General › Power options: choose Sleep, so the player can wake the console.")))
+        add(k.muted("3. " + T("Sign in on the Xbox with the same Microsoft account as in the player.")))
+        add(k.label(T("In the app")).apply { setPadding(0, k.dp(14), 0, k.dp(4)) })
+        add(k.muted(T("Open the player, sign in with your Microsoft account and choose your Xbox under Remote play. The sign-in stays in the app: next time, Start translating goes straight to the game.")))
+        add(k.row(
+            k.grow(k.button(T("Open the Xbox player"), primary = true, icon = R.drawable.ic_tv) { app.vitranslator.phone.xbox.XboxActivity.openForSetup(h.act) }),
+            gap = 8,
+        ).apply { layoutParams = lp(12) })
+        if (signed) add(k.link(T("Sign out of Microsoft")) {
+            k.ask(T("Sign out of Microsoft in the Xbox player?"), T("Sign out")) {
+                app.vitranslator.phone.xbox.XboxActivity.signOut()
+                refresh()
+            }
+        })
+        add(k.callout(T("While translating, the app copies the player's picture to read it. If the copies come out black on your phone, the player offers to capture the screen instead (Android asks you to allow it).")).apply { layoutParams = lp(12) })
+    }
+
+    override fun tick() {
+        // (back from the player: show whether the sign-in worked)
+        if (Prefs(h.act).console == "xbox") {
+            val now = app.vitranslator.phone.xbox.XboxActivity.signedIn()
+            if (now != lastSigned) {
+                lastSigned = now
+                refresh()
+            }
+        }
+    }
+
+    private var lastSigned: Boolean? = null
 
     private fun startDiscovery() {
         if (!Chiaki.available) return

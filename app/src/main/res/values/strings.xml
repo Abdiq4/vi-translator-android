@@ -29,6 +29,7 @@
     <string name="ps_login_pin_wrong">Wrong passcode: try again</string>
     <string name="xbox_hint">Start translating opens Microsoft\'s Remote Play player here. Sign in there with your Microsoft account and connect to your Xbox; the TV keeps showing the console as usual. Keep the screen on while playing.</string>
     <string name="xbox_capture_screen">The video can\'t be read: capture the screen</string>
+    <string name="xbox_setup_status">Sign in, then choose your Xbox. Back when done.</string>
     <string name="xbox_status">Read %1$d frames (%2$s)</string>
 
     <string name="step_tv">2. Connect a TV</string>

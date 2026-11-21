@@ -29,6 +29,7 @@
     <string name="ps_login_pin_wrong">رمز المرور خاطئ: حاول مجددًا</string>
     <string name="xbox_hint">يفتح «ابدأ الترجمة» مشغّل التشغيل عن بُعد من Microsoft هنا. سجّل الدخول فيه بحساب Microsoft واتصل بجهاز Xbox، وتبقى الشاشة تعرض الجهاز كالمعتاد. أبقِ شاشة الهاتف تعمل أثناء اللعب.</string>
     <string name="xbox_capture_screen">تعذّرت قراءة الفيديو: التقط الشاشة</string>
+    <string name="xbox_setup_status">سجّل الدخول ثم اختر جهاز Xbox، وارجع عند الانتهاء.</string>
     <string name="xbox_status">قُرئ %1$d إطارًا (%2$s)</string>
 
     <string name="step_tv">2. اربط شاشة</string>
