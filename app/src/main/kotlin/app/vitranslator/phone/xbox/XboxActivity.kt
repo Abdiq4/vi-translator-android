@@ -12,7 +12,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
-import android.view.Gravity
 import android.view.PixelCopy
 import android.view.View
 import android.view.WindowManager
@@ -22,7 +21,6 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.vitranslator.phone.App
@@ -49,6 +47,9 @@ class XboxActivity : Activity() {
     private var running = false
     private var black = 0
 
+    @Volatile
+    private var loaded = false
+
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(Lang.wrap(base))
     }
@@ -73,6 +74,10 @@ class XboxActivity : Activity() {
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.webChromeClient = WebChromeClient()
         web.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView, url: String) {
+                loaded = true
+            }
+
             // sign-in and the player stay in here; anything else is opened by the phone's browser
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val host = request.url.host ?: return true
@@ -102,9 +107,14 @@ class XboxActivity : Activity() {
             addView(status)
             addView(fallback)
         }
-        val root = FrameLayout(this)
-        root.addView(web, FrameLayout.LayoutParams(-1, -1))
-        root.addView(bar, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
+        // (the bar is under the player, not over it: the copies are of the player alone, so the app
+        // never reads its own words)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.BLACK)
+        }
+        root.addView(web, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(bar, LinearLayout.LayoutParams(-1, -2))
         setContentView(root)
 
         if (savedInstanceState == null) web.loadUrl(URL) else web.restoreState(savedInstanceState)
@@ -177,10 +187,18 @@ class XboxActivity : Activity() {
         }
     }
 
-    /** After ~10 s of black copies, offer to capture the screen instead. */
+    /**
+     * After ~10 s of black copies of a loaded page, offer to capture the screen instead (the video
+     * is drawn where PixelCopy can't see it); a picture again takes the offer back.
+     */
     private fun noteBlack(isBlack: Boolean) {
-        black = if (isBlack) black + 1 else 0
-        if (black == 40) main.post { fallback.visibility = View.VISIBLE }
+        if (!loaded) return
+        if (!isBlack) {
+            if (black >= BLACK_FRAMES) main.post { fallback.visibility = View.GONE }
+            black = 0
+            return
+        }
+        if (++black == BLACK_FRAMES) main.post { fallback.visibility = View.VISIBLE }
     }
 
     private fun askProjection() {
@@ -204,6 +222,7 @@ class XboxActivity : Activity() {
         const val URL = "https://play.xbox.com/remoteplay"
         private const val PERIOD_MS = 250L
         private const val REQ_PROJECTION = 1
+        private const val BLACK_FRAMES = 40
         private val ALLOWED = listOf(
             "xbox.com", "live.com", "microsoft.com", "microsoftonline.com", "msftauth.net", "msauth.net",
             "live.net", "xboxlive.com", "gssv-play-prod.xboxlive.com", "akamaized.net", "msecnd.net",

@@ -117,10 +117,10 @@ class StubCore(context: Context) : Core {
 
     override fun pairTv(address: String, code: String): PairResult {
         val to = TvLink.normalize(address) ?: return PairResult.UNREACHABLE
-        val me = TvLink.ownAddress(ctx)?.hostAddress ?: return PairResult.UNREACHABLE
+        val pc = advertise.ifEmpty { TvLink.ownAddress(ctx)?.hostAddress?.let { "$it:$PAGE_PORT" } } ?: return PairResult.UNREACHABLE
         val bytes = ByteArray(32).also { random.nextBytes(it) }
         val token = bytes.joinToString("") { String.format(Locale.ROOT, "%02x", it) }
-        val (result, tv) = TvLink.pair(to, code.trim(), "$me:$PAGE_PORT", token, deviceName())
+        val (result, tv) = TvLink.pair(to, code.trim(), pc, token, deviceName())
         if (result == PairResult.OK && tv != null) {
             val all = stored().filter { it.getString("id") != tv.id || tv.id.isEmpty() }.toMutableList()
             all.add(JSONObject().put("id", tv.id).put("name", tv.name).put("address", tv.address).put("token", token))
@@ -128,6 +128,14 @@ class StubCore(context: Context) : Core {
         }
         return result
     }
+
+    /**
+     * The address given to the TVs for this phone's page, instead of its own (debug builds, for
+     * emulators behind NAT: "10.0.2.2:8791" with adb forwarding). Empty: its own.
+     */
+    var advertise: String
+        get() = prefs.getString("advertise", "") ?: ""
+        set(v) = prefs.edit().putString("advertise", v).apply()
 
     override fun pairedTvs(): List<Tv> = stored().map { Tv(it.optString("id"), it.optString("name"), it.optString("address")) }
 

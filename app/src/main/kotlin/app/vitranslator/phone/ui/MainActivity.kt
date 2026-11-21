@@ -86,6 +86,7 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
         }
         setContentView(ScrollView(this).apply { addView(root) })
         build()
+        debugOptions(intent)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2)
         }
@@ -120,11 +121,6 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
     // ---- building the screen
 
     private fun build() {
-        root.addView(TextView(this).apply {
-            text = getString(R.string.app_name)
-            textSize = 24f
-            setTypeface(typeface, Typeface.BOLD)
-        })
         update = button(R.string.update_available) { Updater.available?.let { r -> Updater.install(this, r) { main.post { showUpdate() } } } }
         update.visibility = View.GONE
         root.addView(update)
@@ -212,6 +208,21 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
         lines = column()
         root.addView(lines)
         root.addView(hint(getString(R.string.about, App.core.name)))
+    }
+
+    /**
+     * Debug builds only, for testing on emulators:
+     * adb shell am start -n app.vitranslator.phone/.ui.MainActivity --es advertise 10.0.2.2:8791
+     */
+    private fun debugOptions(i: Intent?) {
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) return
+        val a = i?.getStringExtra("advertise") ?: return
+        (App.core as? app.vitranslator.phone.core.StubCore)?.advertise = a
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        debugOptions(intent)
     }
 
     // ---- 1. the console

@@ -93,7 +93,7 @@ class Reader(private val core: Core, private val fps: Int = 4) {
     }
 
     private fun readArea(a: Area, bmp: Bitmap): AreaRead {
-        val text = Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)), 5, TimeUnit.SECONDS)
+        val text = Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)), 20, TimeUnit.SECONDS) // (the first loads the model)
         val words = wordsOf(text)
         val rgba = ByteBuffer.allocate(bmp.byteCount).also { bmp.copyPixelsToBuffer(it) }.array()
         val r = AreaRead(a.id, bmp.width, bmp.height, rgba, words)

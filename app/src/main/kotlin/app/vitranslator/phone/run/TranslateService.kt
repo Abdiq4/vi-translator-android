@@ -232,11 +232,6 @@ class TranslateService : Service(), PsStream.Listener {
         source = null
         App.reader?.close()
         App.reader = null
-        try {
-            App.core.stopServer()
-        } catch (e: Exception) {
-            Log.w(TAG, "stop server", e)
-        }
         wake?.takeIf { it.isHeld }?.release()
         wifi?.takeIf { it.isHeld }?.release()
         if (Live.state != Live.State.FAILED && Live.state != Live.State.ENDED) Live.set(Live.State.IDLE, null)

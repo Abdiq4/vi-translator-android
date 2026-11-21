@@ -9,6 +9,15 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         core = Cores.create(this)
+        // The TV page is served while the app runs (as the PC app does while open): a connected TV
+        // finds the phone at once, and shows the translations when translating starts.
+        Thread {
+            try {
+                core.startServer()
+            } catch (e: Exception) {
+                android.util.Log.w("App", "the TV page couldn't start", e)
+            }
+        }.start()
     }
 
     companion object {
