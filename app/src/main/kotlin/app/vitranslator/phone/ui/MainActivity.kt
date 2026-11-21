@@ -356,7 +356,7 @@ class MainActivity : Activity(), Live.Watcher, CoreListener {
             main.post {
                 tvList.removeAllViews()
                 if (tvs.isEmpty()) tvList.addView(hint(R.string.tv_none))
-                for (tv in tvs) tvList.addView(row(text("📺 ${tv.name} · ${tv.address}"), button(R.string.tv_forget) { forget(tv) }))
+                for (tv in tvs) tvList.addView(row(text("📺 ${tv.name}" + if (tv.address.isEmpty()) "" else " · ${tv.address}"), button(R.string.tv_forget) { forget(tv) }))
             }
         }.start()
     }
