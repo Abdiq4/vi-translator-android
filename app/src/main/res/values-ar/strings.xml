@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VI Translator</string>
+    <string name="ui_language">لغة التطبيق</string>
+    <string name="phone_language">لغة الهاتف</string>
+
+    <string name="step_console">1. جهازك</string>
+    <string name="playstation">PlayStation 5</string>
+    <string name="xbox">Xbox</string>
+    <string name="ps_setup_hint">يبث الهاتف جهاز PS5 عبر التشغيل عن بُعد ليقرأ اللعبة، وتبقى الشاشة تعرض الجهاز كالمعتاد. اضبطه مرة واحدة: في PS5 افتح الإعدادات › النظام › التشغيل عن بُعد › ربط جهاز ليظهر رمز PIN.</string>
+    <string name="ps_find">ابحث عن PS5</string>
+    <string name="ps_address">عنوان PS5 (192.168.1.20)</string>
+    <string name="psn_secondary_hint">سجّل الدخول بحساب PSN ثانٍ غير الذي تلعب به، لأن التشغيل عن بُعد يسجّل دخوله على PS5. لا يُحفظ منه إلا معرّف الحساب.</string>
+    <string name="psn_sign_in">سجّل الدخول إلى PSN</string>
+    <string name="psn_failed">لم ينجح تسجيل الدخول إلى PSN: %1$s</string>
+    <string name="psn_account_id">معرّف حساب PSN</string>
+    <string name="ps_pin">رمز PIN المكوّن من 8 أرقام الظاهر على PS5</string>
+    <string name="ps_register">اربط</string>
+    <string name="ps_wake">أيقظ PS5</string>
+    <string name="ps_registering">جارٍ الربط…</string>
+    <string name="ps_register_missing">اكتب عنوان PS5 ومعرّف الحساب ورمز PIN المكوّن من 8 أرقام.</string>
+    <string name="ps_register_failed">رفض PS5 الربط: تأكد من رمز PIN (يتغير كل بضع دقائق) ومن تفعيل التشغيل عن بُعد.</string>
+    <string name="ps_registered">مربوط بـ %1$s (%2$s)</string>
+    <string name="ps_not_registered">لم يُربط بجهاز PS5 بعد.</string>
+    <string name="ps_not_in_build">التشغيل عن بُعد لـ PS غير موجود في هذه النسخة من التطبيق.</string>
+    <string name="ps_ready">يعمل</string>
+    <string name="ps_standby">وضع الراحة</string>
+    <string name="ps_login_pin">يطلب PS5 رمز مرور الحساب</string>
+    <string name="ps_login_pin_wrong">رمز المرور خاطئ: حاول مجددًا</string>
+    <string name="xbox_hint">يفتح «ابدأ الترجمة» مشغّل التشغيل عن بُعد من Microsoft هنا. سجّل الدخول فيه بحساب Microsoft واتصل بجهاز Xbox، وتبقى الشاشة تعرض الجهاز كالمعتاد. أبقِ شاشة الهاتف تعمل أثناء اللعب.</string>
+    <string name="xbox_capture_screen">تعذّرت قراءة الفيديو: التقط الشاشة</string>
+    <string name="xbox_status">قُرئ %1$d إطارًا (%2$s)</string>
+
+    <string name="step_tv">2. اربط شاشة</string>
+    <string name="tv_hint">افتح VI Translator على الشاشة (Android TV أو LG أو Samsung): يظهر رمز من 6 أرقام.</string>
+    <string name="tv_none">لا توجد شاشة مربوطة بعد.</string>
+    <string name="tv_find">ابحث عن الشاشات</string>
+    <string name="tv_found_none">لم يُعثر على شاشة: هل تطبيق الشاشة مفتوح وعلى الشبكة نفسها؟ يمكنك كتابة عنوانها.</string>
+    <string name="tv_address">عنوان الشاشة</string>
+    <string name="tv_code">الرمز الظاهر على الشاشة</string>
+    <string name="tv_connect">اربط</string>
+    <string name="tv_connecting">جارٍ الربط…</string>
+    <string name="tv_connected">تم الربط.</string>
+    <string name="tv_wrong_code">ليس هذا الرمز الظاهر على الشاشة.</string>
+    <string name="tv_new_code">رموز خاطئة كثيرة: تعرض الشاشة رمزًا جديدًا.</string>
+    <string name="tv_unreachable">لم تردّ الشاشة: هل تطبيق الشاشة مفتوح؟</string>
+    <string name="tv_missing">اختر شاشة (أو اكتب عنوانها) والرمز المكوّن من 6 أرقام.</string>
+    <string name="tv_forget">افصل</string>
+    <string name="searching">جارٍ البحث…</string>
+
+    <string name="step_game">3. اللعبة واللغة</string>
+    <string name="translate_into">الترجمة إلى</string>
+
+    <string name="step_start">4. الترجمة</string>
+    <string name="keep_open_hint">أبقِ VI Translator مفتوحًا أثناء اللعب (مع PS5 يمكن إطفاء الشاشة).</string>
+    <string name="start">ابدأ الترجمة</string>
+    <string name="stop">أوقف</string>
+    <string name="choose_console">اختر جهازك أولًا.</string>
+    <string name="state_starting">جارٍ البدء…</string>
+    <string name="state_connecting">جارٍ الاتصال بـ PS5…</string>
+    <string name="state_reading">الترجمة جارية.</string>
+    <string name="state_ended">توقفت.</string>
+    <string name="state_failed">توقفت: %1$s</string>
+    <string name="stats">قُرئ %1$d من %2$d إطارًا · %3$d م.ث · %4$s</string>
+
+    <string name="step_lines">5. ما قُرئ وتُرجم</string>
+    <string name="lines_none">تظهر هنا الأسطر المقروءة.</string>
+    <string name="about">محرك الترجمة: %1$s</string>
+
+    <string name="notify_channel">الترجمة</string>
+    <string name="notify_text">يترجم اللعبة لشاشتك</string>
+
+    <string name="update_available">تحديث</string>
+    <string name="update_to">حدّث إلى %1$s</string>
+    <string name="update_downloading">جارٍ تنزيل التحديث…</string>
+    <string name="update_installing">جارٍ التثبيت…</string>
+    <string name="update_failed">فشل التحديث: حاول مجددًا</string>
+</resources>

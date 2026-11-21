@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VI Translator</string>
+    <string name="ui_language">App language</string>
+    <string name="phone_language">The phone\'s</string>
+
+    <string name="step_console">1. Your console</string>
+    <string name="playstation">PlayStation 5</string>
+    <string name="xbox">Xbox</string>
+    <string name="ps_setup_hint">The phone streams the PS5 with Remote Play to read the game; the TV keeps showing the console as usual. Set it up once: on the PS5, Settings › System › Remote Play › Link Device shows a PIN.</string>
+    <string name="ps_find">Find the PS5</string>
+    <string name="ps_address">PS5 address (192.168.1.20)</string>
+    <string name="psn_secondary_hint">Sign in with a second PSN account, not the one you play with: Remote Play signs it in on the PS5. Only its account ID is kept.</string>
+    <string name="psn_sign_in">Sign in to PSN</string>
+    <string name="psn_failed">PSN sign-in didn\'t work: %1$s</string>
+    <string name="psn_account_id">PSN account ID</string>
+    <string name="ps_pin">The 8-digit PIN the PS5 shows</string>
+    <string name="ps_register">Link</string>
+    <string name="ps_wake">Wake the PS5</string>
+    <string name="ps_registering">Linking…</string>
+    <string name="ps_register_missing">Fill in the PS5\'s address, the account ID and the 8-digit PIN.</string>
+    <string name="ps_register_failed">The PS5 refused: check the PIN (it changes every few minutes) and that Remote Play is on.</string>
+    <string name="ps_registered">Linked to %1$s (%2$s)</string>
+    <string name="ps_not_registered">Not linked to a PS5 yet.</string>
+    <string name="ps_not_in_build">PS Remote Play isn\'t in this build of the app.</string>
+    <string name="ps_ready">on</string>
+    <string name="ps_standby">rest mode</string>
+    <string name="ps_login_pin">The PS5 asks for the account\'s passcode</string>
+    <string name="ps_login_pin_wrong">Wrong passcode: try again</string>
+    <string name="xbox_hint">Start translating opens Microsoft\'s Remote Play player here. Sign in there with your Microsoft account and connect to your Xbox; the TV keeps showing the console as usual. Keep the screen on while playing.</string>
+    <string name="xbox_capture_screen">The video can\'t be read: capture the screen</string>
+    <string name="xbox_status">Read %1$d frames (%2$s)</string>
+
+    <string name="step_tv">2. Connect a TV</string>
+    <string name="tv_hint">Open VI Translator on the TV (Android TV, LG or Samsung): it shows a 6-digit code.</string>
+    <string name="tv_none">No TV connected yet.</string>
+    <string name="tv_find">Find TVs</string>
+    <string name="tv_found_none">No TV found: is the TV app open and on the same network? You can type its address.</string>
+    <string name="tv_address">TV address</string>
+    <string name="tv_code">The code the TV shows</string>
+    <string name="tv_connect">Connect</string>
+    <string name="tv_connecting">Connecting…</string>
+    <string name="tv_connected">Connected.</string>
+    <string name="tv_wrong_code">That isn\'t the code the TV shows.</string>
+    <string name="tv_new_code">Too many wrong codes: the TV shows a new one.</string>
+    <string name="tv_unreachable">The TV didn\'t answer: is the TV app open?</string>
+    <string name="tv_missing">Pick a TV (or type its address) and the 6-digit code.</string>
+    <string name="tv_forget">Disconnect</string>
+    <string name="searching">Searching…</string>
+
+    <string name="step_game">3. The game and the language</string>
+    <string name="translate_into">Translate into</string>
+
+    <string name="step_start">4. Translate</string>
+    <string name="keep_open_hint">Keep VI Translator open while playing (with a PS5 the screen can be off).</string>
+    <string name="start">Start translating</string>
+    <string name="stop">Stop</string>
+    <string name="choose_console">Choose your console first.</string>
+    <string name="state_starting">Starting…</string>
+    <string name="state_connecting">Connecting to the PS5…</string>
+    <string name="state_reading">Translating.</string>
+    <string name="state_ended">Stopped.</string>
+    <string name="state_failed">Stopped: %1$s</string>
+    <string name="stats">Read %1$d of %2$d frames · %3$d ms · %4$s</string>
+
+    <string name="step_lines">5. Read and translated</string>
+    <string name="lines_none">The lines read show here.</string>
+    <string name="about">Translation core: %1$s</string>
+
+    <string name="notify_channel">Translating</string>
+    <string name="notify_text">Translating the game for your TV</string>
+
+    <string name="update_available">Update</string>
+    <string name="update_to">Update to %1$s</string>
+    <string name="update_downloading">Downloading the update…</string>
+    <string name="update_installing">Installing…</string>
+    <string name="update_failed">The update failed: try again</string>
+</resources>
