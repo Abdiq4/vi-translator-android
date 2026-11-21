@@ -1,11 +1,5 @@
 package app.vitranslator.phone.ps
 
-import android.graphics.ImageFormat
-import android.hardware.HardwareBuffer
-import android.media.ImageReader
-import android.os.Build
-import android.os.Handler
-import android.os.HandlerThread
 import android.util.Log
 import app.vitranslator.phone.ps.chiaki.Codec
 import app.vitranslator.phone.ps.chiaki.ConnectInfo
@@ -19,12 +13,11 @@ import app.vitranslator.phone.ps.chiaki.Session
 import app.vitranslator.phone.ps.chiaki.VideoFPSPreset
 import app.vitranslator.phone.ps.chiaki.VideoResolutionPreset
 import app.vitranslator.phone.read.Reader
-import app.vitranslator.phone.read.YuvFrame
 
 /**
  * PS Remote Play from the PS5, for reading only: chiaki-ng's session decodes the video with
- * MediaCodec straight into an ImageReader (no screen), no sound. Every frame is taken from the
- * reader at once and given back (so the decoder never waits); about 4 a second are read.
+ * MediaCodec straight into a GPU texture (GlFrames: no screen), no sound. Every frame is taken at
+ * once (so the decoder never waits); about 4 a second are copied and read.
  */
 class PsStream(
     private val console: PsConsole,
@@ -41,9 +34,7 @@ class PsStream(
 
     enum class State { CONNECTING, STREAMING, ENDED, FAILED }
 
-    private val thread = HandlerThread("ps-frames").apply { start() }
-    private val handler = Handler(thread.looper)
-    private var images: ImageReader? = null
+    private var gl: GlFrames? = null
     private var session: Session? = null
 
     /** frames the decoder gave (all of them, read or not) */
@@ -53,29 +44,22 @@ class PsStream(
 
     fun start(resolution: VideoResolutionPreset = VideoResolutionPreset.RES_1080P) {
         val profile = ConnectVideoProfile.preset(resolution, VideoFPSPreset.FPS_30, Codec.CODEC_H264)
-        // (the buffers are read by the CPU: said so, many phones' hardware decoders (Qualcomm, MediaTek)
-        // otherwise write them compressed or tiled, which reads as a green, striped picture)
-        val ir = if (Build.VERSION.SDK_INT >= 29) {
-            ImageReader.newInstance(profile.width, profile.height, ImageFormat.YUV_420_888, 3, HardwareBuffer.USAGE_CPU_READ_OFTEN)
-        } else {
-            ImageReader.newInstance(profile.width, profile.height, ImageFormat.YUV_420_888, 3)
-        }
-        ir.setOnImageAvailableListener({ r ->
-            val img = try {
-                r.acquireLatestImage()
-            } catch (e: IllegalStateException) {
-                null
-            } ?: return@setOnImageAvailableListener
+        // (through the GPU: the decoder's own buffers can't be read by the CPU on every phone, see GlFrames)
+        val glFrames = GlFrames(profile.width, profile.height) { frame ->
+            this.frames++
             try {
-                frames++
-                reader.offer(YuvFrame(img))
+                reader.offer(frame)
             } catch (e: RuntimeException) {
                 Log.w(TAG, "frame", e)
-            } finally {
-                img.close()
             }
-        }, handler)
-        images = ir
+        }
+        val surface = if (glFrames.start()) glFrames.surface else null
+        if (surface == null) {
+            glFrames.stop()
+            listener.onState(State.FAILED, "video: the phone's GPU could not be used")
+            return
+        }
+        gl = glFrames
 
         val s = try {
             Session(ConnectInfo(true, console.host, console.registKey, console.rpKey, profile), logFile, false)
@@ -91,7 +75,7 @@ class PsStream(
                 is RumbleEvent -> Unit
             }
         }
-        s.setSurface(ir.surface)
+        s.setSurface(surface)
         session = s
         listener.onState(State.CONNECTING, null)
         val err = s.start()
@@ -109,9 +93,8 @@ class PsStream(
             s.stop()
             s.dispose()
         }
-        images?.close()
-        images = null
-        thread.quitSafely()
+        gl?.stop()
+        gl = null
     }
 
     companion object {

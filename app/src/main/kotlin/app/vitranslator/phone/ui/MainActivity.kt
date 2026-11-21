@@ -131,6 +131,7 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
         root.addView(updateBar)
         body = FrameLayout(this)
         root.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.clearOfSystemBars()
         setContentView(root)
         window.statusBarColor = k.panel
         window.navigationBarColor = k.bg

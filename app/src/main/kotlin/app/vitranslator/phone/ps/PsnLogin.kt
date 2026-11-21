@@ -17,6 +17,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import app.vitranslator.phone.ui.clearOfSystemBars
 
 /**
  * The PSN account ID, which registering with a PS5 needs: the user signs in on Sony's own page
@@ -114,6 +115,7 @@ class PsnLoginActivity : Activity() {
                 caught(Uri.parse(url))
             }
         }
+        web.clearOfSystemBars()
         setContentView(web)
         web.loadUrl(Psn.loginUrl)
     }

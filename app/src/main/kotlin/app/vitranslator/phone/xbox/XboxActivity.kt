@@ -31,6 +31,7 @@ import app.vitranslator.phone.Lang
 import app.vitranslator.phone.R
 import app.vitranslator.phone.read.BitmapFrame
 import app.vitranslator.phone.run.TranslateService
+import app.vitranslator.phone.ui.clearOfSystemBars
 
 /**
  * Xbox: Microsoft's own Remote Play web player, in the app, signed in by the user there. While it
@@ -119,6 +120,7 @@ class XboxActivity : Activity() {
         }
         root.addView(web, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(bar, LinearLayout.LayoutParams(-1, -2))
+        root.clearOfSystemBars()
         setContentView(root)
 
         if (Build.VERSION.SDK_INT >= 33) {
