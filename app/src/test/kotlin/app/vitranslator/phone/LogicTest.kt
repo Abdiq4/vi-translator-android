@@ -4,6 +4,7 @@ import app.vitranslator.phone.core.StubCore
 import app.vitranslator.phone.core.TvLink
 import app.vitranslator.phone.core.Word
 import app.vitranslator.phone.ps.Psn
+import app.vitranslator.phone.read.YuvSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -60,5 +61,24 @@ class LogicTest {
         assertTrue(Updater.newer("1.2.10", "1.2.9"))
         assertTrue(!Updater.newer("1.2.9", "1.2.9"))
         assertNull(Updater.parse("1.2"))
+    }
+
+    /** The PS5 stream's grey (U = V = 128) as RGB: its own black and white come out as the HDMI picture's. */
+    private fun grey(y: Int): Int {
+        val out = ByteArray(4)
+        YuvSnapshot.pixel(out, 0, y, 128, 128)
+        assertEquals("grey stays grey", out[0], out[1])
+        assertEquals("grey stays grey", out[1], out[2])
+        return out[0].toInt() and 255
+    }
+
+    @Test
+    fun ps5LevelsAreStretchedToTheHdmiPictures() {
+        // the stream's blacks (~32 after the video range) and whites (~228) were measured at Y ~ 44 and ~ 212
+        assertTrue("black", grey(16) == 0 && grey(44) <= 20)
+        assertTrue("white >= 226 (GTA VI's pause-menu checks)", grey(212) >= 240)
+        assertEquals(255, grey(235))
+        // (and in between it rises steadily)
+        assertTrue((16..235).zipWithNext().all { (a, b) -> grey(a) <= grey(b) })
     }
 }

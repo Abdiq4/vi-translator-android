@@ -75,7 +75,13 @@ class YuvSnapshot(
     override val width get() = pic.width()
     override val height get() = pic.height()
 
-    /** BT.709 limited range (the PS5's HD stream) to RGBA. */
+    /**
+     * BT.709 limited range (the PS5's HD stream) to RGBA, then studio levels (16–235) stretched to
+     * full (0–255): the PS5's Remote Play picture carries them (its blacks come out at ~32 and whites
+     * at ~228, where the console's HDMI picture has ~15 and ~248), and the game pages' colour checks
+     * are tuned on the HDMI picture (GTA VI's pause menu isn't recognised without this). Measured on
+     * a real PS5 stream (the Android TV app's test).
+     */
     override fun rgba(): ByteArray {
         val w = width
         val h = height
@@ -85,19 +91,27 @@ class YuvSnapshot(
             val yBase = row * yRow
             val cBase = (row shr 1) * cRow
             for (col in pic.left until pic.left + w) {
-                val yy = ((y[yBase + col * yPix].toInt() and 255) - 16).coerceAtLeast(0)
                 val ci = cBase + (col shr 1) * cPix
-                val uu = (u[ci].toInt() and 255) - 128
-                val vv = (v[ci].toInt() and 255) - 128
-                // (fixed point, x1024)
-                val c = 1192 * yy
-                out[i] = ((c + 1836 * vv) shr 10).coerceIn(0, 255).toByte()
-                out[i + 1] = ((c - 218 * uu - 546 * vv) shr 10).coerceIn(0, 255).toByte()
-                out[i + 2] = ((c + 2163 * uu) shr 10).coerceIn(0, 255).toByte()
-                out[i + 3] = -1
+                pixel(out, i, y[yBase + col * yPix].toInt() and 255, u[ci].toInt() and 255, v[ci].toInt() and 255)
                 i += 4
             }
         }
         return out
+    }
+
+    companion object {
+        /** One pixel's Y, U, V (0..255) as RGBA at out[i]. */
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun pixel(out: ByteArray, i: Int, y: Int, u: Int, v: Int) {
+            val yy = (y - 16).coerceAtLeast(0)
+            val uu = u - 128
+            val vv = v - 128
+            // (fixed point, x1024: BT.709's factors times 255/219, less 16 x 255/219 for the levels)
+            val c = 1388 * yy - 19076
+            out[i] = ((c + 2138 * vv) shr 10).coerceIn(0, 255).toByte()
+            out[i + 1] = ((c - 254 * uu - 636 * vv) shr 10).coerceIn(0, 255).toByte()
+            out[i + 2] = ((c + 2519 * uu) shr 10).coerceIn(0, 255).toByte()
+            out[i + 3] = -1
+        }
     }
 }
