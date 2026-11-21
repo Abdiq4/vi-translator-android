@@ -69,8 +69,17 @@ interface Core {
     /** The whole picture translated at once (the desktop's Snapshot), as JSON; null when this core can't (yet). */
     fun takeSnapshot(rgba: ByteArray, width: Int, height: Int): String? = null
 
-    /** The home-network page with the live translations: {"url"} or {"error"}; null when this core has none (yet). */
+    /** The home-network page with the live translations: {"enabled", "running", "url", "qr" (SVG), "error"}; null when this core has none (yet). */
     fun lanInfo(): String? = null
+
+    /** The game page on show now ({"layout", "reason"}), for a view opened after it appeared; null when unknown. */
+    fun screenJson(): String? = null
+
+    /** The TV page for this phone's own preview (http://127.0.0.1:<port>/tv?t=<key>), or null. */
+    fun localViewerUrl(): String? = null
+
+    /** The font families bundled with the core (what an area's font can be). */
+    fun fontList(): List<String> = emptyList()
 
     /** The core's own version ("" for the stand-in). */
     val coreVersion: String get() = ""
@@ -125,8 +134,8 @@ data class Word(val text: String, val left: Int, val top: Int, val right: Int, v
 /** A line read on the game and its translation ([translated] empty when there is none). */
 data class Line(val id: Long, val areaId: String, val original: String, val translated: String, val timeMs: Long)
 
-/** [id]: the TV app's own id; [address]: "ip:port" (empty when not known). */
-data class Tv(val id: String, val name: String, val address: String)
+/** [id]: the TV app's own id; [address]: "ip:port" (empty when not known); [online]: it asked for the page lately (null: unknown). */
+data class Tv(val id: String, val name: String, val address: String, val online: Boolean? = null)
 
 enum class PairResult {
     OK,

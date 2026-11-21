@@ -38,6 +38,11 @@ class Reader(private val core: Core) {
     var frameSize = ""
         private set
 
+    /** The last frame read, whole (RGBA, width, height): what a snapshot translates. */
+    @Volatile
+    var last: Triple<ByteArray, Int, Int>? = null
+        private set
+
     /** The screen's preview, while it shows one: gets a small copy of each frame read (on the reading thread). */
     @Volatile
     var preview: ((Bitmap) -> Unit)? = null
@@ -63,6 +68,7 @@ class Reader(private val core: Core) {
                 val start = SystemClock.elapsedRealtime()
                 frameSize = "${snap.width}x${snap.height}"
                 val rgba = snap.rgba()
+                last = Triple(rgba, snap.width, snap.height)
                 preview?.let { show -> small(rgba, snap.width, snap.height)?.let(show) }
                 val wait = core.processFrame(rgba, snap.width, snap.height)
                 lastMs = SystemClock.elapsedRealtime() - start

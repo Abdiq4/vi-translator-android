@@ -33,6 +33,20 @@ class PlayPanel(h: Host) : Panel(h) {
     private val preview = PreviewView(k, cfg)
     private val stageMsg: LinearLayout
     private val stats: TextView
+
+    /**
+     * The translations over the picture as the TVs draw them: the core's own TV page, loaded from
+     * this phone, transparent (game pages included). Touches go through to the picture.
+     */
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private val tvPage = android.webkit.WebView(h.act).apply {
+        setBackgroundColor(Color.TRANSPARENT)
+        settings.javaScriptEnabled = true
+        isClickable = false
+        isFocusable = false
+        visibility = View.GONE
+    }
+    private var overlayUrl: String? = null
     private val glance = k.column()
     private val log = k.column()
     private val paused: TextView
@@ -54,7 +68,7 @@ class PlayPanel(h: Host) : Panel(h) {
             setPadding(k.dp(8), k.dp(6), k.dp(8), k.dp(6))
         }
         val buttons = k.row(
-            k.iconButton(R.drawable.ic_camera, T("Translate the whole picture")) { h.go("snapshot") },
+            k.iconButton(R.drawable.ic_camera, T("Translate the whole picture")) { snapshot() },
             k.iconButton(R.drawable.ic_fullscreen, T("Full screen")) { fullScreen() },
             gap = 8,
         )
@@ -63,6 +77,7 @@ class PlayPanel(h: Host) : Panel(h) {
             clipToOutline = true
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             addView(preview, FrameLayout.LayoutParams(-1, -2))
+            addView(tvPage, FrameLayout.LayoutParams(-1, -1))
             addView(stageMsg, FrameLayout.LayoutParams(-1, -1))
             addView(stats, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
             addView(buttons, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { setMargins(k.dp(10), k.dp(10), k.dp(10), k.dp(10)) })
@@ -94,6 +109,16 @@ class PlayPanel(h: Host) : Panel(h) {
 
     override fun refresh() {
         langs = App.core.languages()
+        if (overlayUrl == null) h.io {
+            val url = App.core.localViewerUrl()
+            if (url != null) h.ui {
+                overlayUrl = url
+                tvPage.loadUrl(url)
+                tvPage.visibility = View.VISIBLE
+                // (the TV page draws the translations: the preview's own drawing of them stops)
+                preview.drawText = false
+            }
+        }
         val running = Live.state in listOf(Live.State.STARTING, Live.State.CONNECTING, Live.State.READING)
         start.text = if (running) T("Stop") else T("Start translating")
         start.background = if (running) k.round(k.panel2, 9, k.line) else k.sunset(9)
@@ -223,6 +248,17 @@ class PlayPanel(h: Host) : Panel(h) {
     ).apply {
         setPadding(0, k.dp(8), 0, k.dp(8))
         background = k.round(Color.TRANSPARENT, 0)
+    }
+
+    private fun snapshot() {
+        Snaps.take(h) { snap, err ->
+            if (snap != null) Snaps.got(h, snap)
+            else android.widget.Toast.makeText(h.act, T("Could not translate the picture: {e}", "e" to (err ?: "")), android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun close() {
+        tvPage.destroy()
     }
 
     // ---- start / stop (the phone connects to the console; the desktop reads a window)

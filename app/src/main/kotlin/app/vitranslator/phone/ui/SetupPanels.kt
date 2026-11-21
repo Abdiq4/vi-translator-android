@@ -229,6 +229,8 @@ class ShowPanel(h: Host) : Panel(h) {
             updateLan()
         })
         add(lanInfo.apply { layoutParams = lp(4) })
+        (qr.parent as? android.view.ViewGroup)?.removeView(qr)
+        add(qr)
         add(k.check(T("Allow changes from that page"), cfg.bool("lan_control")) { cfg.put("lan_control", it) })
         add(k.muted(T("Lets the page switch the overlays and the live translations, and show or hide read areas and game pages."), small = true))
         updateLan()
@@ -241,22 +243,42 @@ class ShowPanel(h: Host) : Panel(h) {
 
     private fun lp(top: Int) = LinearLayout.LayoutParams(-1, -2).apply { topMargin = k.dp(top) }
 
-    private fun updateLan() {
+    private val qr = android.webkit.WebView(h.act).apply {
+        setBackgroundColor(Color.WHITE)
+        visibility = View.GONE
+        layoutParams = LinearLayout.LayoutParams(k.dp(170), k.dp(170)).apply { topMargin = k.dp(8) }
+    }
+
+    private fun updateLan(tries: Int = 0) {
         if (!cfg.bool("lan_page")) {
             lanInfo.text = T("Off. Turn it on to read the live translations on another device on your home network.")
+            qr.visibility = View.GONE
             return
         }
+        // (the setting is saved first; the page starts with it)
+        cfg.flush()
         h.io {
-            val info = App.core.lanInfo()
+            val info = try {
+                App.core.lanInfo()?.let { JSONObject(it) }
+            } catch (e: Exception) {
+                null
+            }
             h.ui {
+                val url = info?.takeUnless { it.isNull("url") }?.optString("url").orEmpty()
+                val error = info?.takeUnless { it.isNull("error") }?.optString("error").orEmpty()
                 lanInfo.text = when {
                     info == null -> T("Not in the phone app yet: coming with an update.")
-                    else -> {
-                        val o = JSONObject(info)
-                        if (o.optString("url").isNotEmpty()) T("Open {url} on a phone, tablet or PC on the same network.", "url" to o.optString("url"))
-                        else T("The page couldn't start ({error}). Another program may be using this port.", "error" to o.optString("error"))
-                    }
+                    url.isNotEmpty() -> T("Open {url} on a phone, tablet or PC on the same network.", "url" to url)
+                    error.isNotEmpty() -> T("The page couldn't start ({error}). Another program may be using this port.", "error" to error)
+                    else -> T("Starting…")
                 }
+                val svg = info?.takeUnless { it.isNull("qr") }?.optString("qr").orEmpty()
+                qr.visibility = if (url.isNotEmpty() && svg.contains("<svg")) View.VISIBLE else View.GONE
+                if (qr.visibility == View.VISIBLE) {
+                    val page = "<html><body style=\"margin:0;background:#fff\">" + svg.replace("<svg", "<svg style=\"width:100%;height:100%\"") + "</body></html>"
+                    qr.loadDataWithBaseURL(null, page, "text/html", "utf-8", null)
+                }
+                if (url.isEmpty() && error.isEmpty() && info != null && tries < 20) view.postDelayed({ updateLan(tries + 1) }, 400)
             }
         }
     }
@@ -274,8 +296,15 @@ class ShowPanel(h: Host) : Panel(h) {
                 tvConnected.addView(k.label(T("Connected TVs")).apply { setPadding(0, k.dp(14), 0, k.dp(4)) })
                 for (tv in tvs) {
                     tvConnected.addView(k.row(
-                        k.icon(R.drawable.ic_tv, k.accentUi, 20),
-                        k.grow(k.text(tv.name + if (tv.address.isEmpty()) "" else " · ${tv.address}", k.base, k.text, k.bold)),
+                        k.icon(R.drawable.ic_tv, if (tv.online == false) k.muted else k.accentUi, 20),
+                        k.grow(k.column(
+                            k.text(tv.name + if (tv.address.isEmpty()) "" else " · ${tv.address}", k.base, k.text, k.bold),
+                            k.muted(when (tv.online) {
+                                true -> T("Showing the translations")
+                                false -> T("Not connected now (the TV is off, or VI Translator isn't open on it)")
+                                null -> ""
+                            }, small = true),
+                        )),
                         k.link(T("Remove")) { forget(tv) },
                         gap = 10,
                     ).apply {
@@ -396,14 +425,15 @@ class SnapshotPanel(h: Host) : Panel(h) {
 
     private fun take() {
         status.visibility = View.VISIBLE
+        status.setTextColor(k.text)
         status.text = T("Translating the whole picture…")
-        h.io {
-            val r = try {
-                App.core.takeSnapshot(ByteArray(0), 0, 0)
-            } catch (e: Exception) {
-                null
+        Snaps.take(h) { snap, err ->
+            if (snap != null) {
+                status.text = Snaps.got(h, snap)
+            } else {
+                status.text = T("Could not translate the picture: {e}", "e" to (err ?: ""))
+                status.setTextColor(k.err)
             }
-            h.ui { status.text = if (r == null) T("Not in the phone app yet: coming with an update.") else T("Done") }
         }
     }
 

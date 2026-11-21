@@ -11,6 +11,15 @@ import org.json.JSONObject
 
 /** The fonts bundled with the app (the desktop's BUNDLED_FONTS, SIL Open Font License). */
 object Fonts {
+    /** the core's own list (fontList), read once */
+    private val core: List<String> by lazy {
+        try {
+            App.core.fontList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     val BUNDLED = listOf(
         "Lalezar" to "heavy display, great for game titles",
         "Changa" to "bold geometric",
@@ -24,6 +33,8 @@ object Fonts {
         if (withDefault != null) o += "" to withDefault
         o += (Kit.GROUP + "bundled") to T("Included with the app")
         for ((n, note) in BUNDLED) o += n to "$n — ${T(note)}"
+        // (any other font the core bundles)
+        for (n in core) if (BUNDLED.none { it.first == n }) o += n to n
         return o
     }
 

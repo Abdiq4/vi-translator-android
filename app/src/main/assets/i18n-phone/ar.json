@@ -71,5 +71,7 @@
  "The PS5 asks for the account's passcode": "يطلب PS5 رمز مرور الحساب",
  "rest mode": "وضع الراحة",
  "on": "يعمل",
- "Free": "مجاني"
+ "Free": "مجاني",
+ "Not connected now (the TV is off, or VI Translator isn't open on it)": "غير متصل الآن (الشاشة مطفأة، أو VI Translator غير مفتوح عليها)",
+ "Showing the translations": "يعرض الترجمات"
 }

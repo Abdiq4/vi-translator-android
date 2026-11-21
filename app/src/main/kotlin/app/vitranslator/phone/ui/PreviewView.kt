@@ -49,6 +49,9 @@ class PreviewView(private val k: Kit, private val cfg: Cfg) : View(k.ctx) {
         }
 
     var rtl = true
+
+    /** draw the translations (off when the core's TV page draws them over this) */
+    var drawText = true
     var fps: String? = null
 
     /** an area was moved or resized (by a drag) */
@@ -96,7 +99,7 @@ class PreviewView(private val k: Kit, private val cfg: Cfg) : View(k.ctx) {
                 fill.color = k.accent
                 c.drawCircle(r.right, r.bottom, k.dp(7).toFloat(), fill)
             }
-            val t = shown[a.optString("id")] ?: sample
+            val t = (if (drawText) shown[a.optString("id")] else null) ?: sample
             if (!t.isNullOrEmpty() && a.optBoolean("enabled", true)) drawText(c, t, a, Cfg.styleOf(a, style), r)
         }
         fps?.let {

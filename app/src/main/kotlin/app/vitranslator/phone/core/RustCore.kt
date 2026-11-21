@@ -62,7 +62,7 @@ class RustCore(context: Context, recognizer: Recognizer) : Core {
         try {
             engine.prepare(game, language)
         } catch (e: FfiCoreException) {
-            throw CoreException(e.message ?: e.toString())
+            throw CoreException((e as? FfiCoreException.Failed)?.reason ?: e.message ?: e.toString())
         }
     }
 
@@ -98,11 +98,32 @@ class RustCore(context: Context, recognizer: Recognizer) : Core {
         try {
             engine.updateConfig(patch)
         } catch (e: FfiCoreException) {
-            throw CoreException(e.message ?: e.toString())
+            throw CoreException((e as? FfiCoreException.Failed)?.reason ?: e.message ?: e.toString())
         }
     }
 
     override fun memoryStatsJson(): String = engine.memoryStatsJson()
+
+    override fun memoryClear(): Boolean {
+        engine.memoryClear()
+        return true
+    }
+
+    override fun pageOptions(game: String): String = engine.pageOptions(game)
+
+    override fun screenJson(): String = engine.screenJson()
+
+    override fun takeSnapshot(rgba: ByteArray, width: Int, height: Int): String = try {
+        engine.takeSnapshot(rgba, width.toUInt(), height.toUInt())
+    } catch (e: FfiCoreException) {
+        throw CoreException((e as? FfiCoreException.Failed)?.reason ?: e.message ?: e.toString())
+    }
+
+    override fun lanInfo(): String = engine.lanInfo()
+
+    override fun localViewerUrl(): String? = engine.localViewerUrl()
+
+    override fun fontList(): List<String> = engine.fontList()
 
     override fun perfJson(): String = engine.perfJson()
 
@@ -129,7 +150,7 @@ class RustCore(context: Context, recognizer: Recognizer) : Core {
         PairResult.UNREACHABLE
     }
 
-    override fun pairedTvs(): List<Tv> = engine.listTvs().map { Tv(it.id, it.name, "") }
+    override fun pairedTvs(): List<Tv> = engine.listTvs().map { Tv(it.id, it.name, "", it.online) }
 
     override fun forgetTv(id: String) {
         engine.removeTv(id)
