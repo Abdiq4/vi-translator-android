@@ -1,0 +1,21 @@
+VI Translator huonyesha manukuu ya mchezo yakiwa yametafsiriwa kwa lugha yako, papo hapo, juu ya mchezo kwenye TV yako, kwa simu yako pekee: bila PC wala kadi ya kunasa video.
+
+Simu huunganishwa na PS5 au Xbox yako kupitia mtandao wa nyumbani kwako kwa Remote Play, husoma manukuu na malengo ya mchezo, na kuyatafsiri. Tafsiri huenda kwenye programu ya VI Translator kwenye TV yako, inayozichora juu ya mchezo mahali panapostahili. TV huendelea kuonyesha picha ya konsoli yenyewe kwa ubora kamili, na unacheza kwa kidhibiti chako kama kawaida.
+
+• PS5: iunganishe mara moja kwa akaunti yako ya PSN na PIN inayoonyeshwa na konsoli
+• Xbox: ingia kwenye kicheza Remote Play cha Microsoft ndani ya programu
+• Huunganishwa na programu ya TV kwa msimbo wa tarakimu 6: hakuna akaunti
+• Tafsiri za papo hapo pia kwenye simu, na kwenye kifaa chochote cha mtandao wa nyumbani kwako kupitia kivinjari
+• Hufanya kazi hata skrini ya simu ikiwa imezimwa (PS5)
+• Programu inazungumza lugha 33
+
+Unachohitaji:
+• Simu au kompyuta kibao ya Android (Android 8 au mpya zaidi)
+• PS5 au Xbox, na TV yenye programu ya VI Translator ya TV (Android TV na Google TV, LG au Samsung), vyote kwenye mtandao uleule wa nyumbani
+• Kwa PS5, akaunti ya pili ya PSN: Remote Play huitumia kuingia kwenye konsoli
+
+Tafsiri: mistari inayojulikana na kumbukumbu ya tafsiri ni bila malipo; kwa mingine, tumia ufunguo wako mwenyewe wa DeepL, Google, Microsoft Azure, LibreTranslate, Claude au ChatGPT. Simu husoma manukuu yaliyoandikwa kwa alfabeti ya Kilatini, kama Kiingereza. Maelekezo ya hatua kwa hatua: vitranslator.app
+
+Faragha: programu haimtumii msanidi programu chochote kukuhusu wewe au unachocheza. Mistari ya kutafsiri huenda tu kwenye huduma ya tafsiri unayochagua, na tafsiri huenda tu kwenye TV yako mwenyewe.
+
+VI Translator ni mradi usio rasmi wa mashabiki, hauhusiani na wala haujaidhinishwa na Sony Interactive Entertainment, Microsoft au mchapishaji yeyote wa michezo. PlayStation, PS5 na Xbox ni alama za biashara za wamiliki wao husika.

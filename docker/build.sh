@@ -14,8 +14,8 @@ docker build -t "$IMAGE" docker
 WHAT="${1:-debug}"
 case "$WHAT" in
   native) CMD="native/build.sh" ;;
-  debug) CMD="native/build.sh && ./gradlew --no-daemon assembleDebug -PrequireNative" ;;
-  release) CMD="native/build.sh && ./gradlew --no-daemon assembleRelease -PrequireNative" ;;
+  debug) CMD="native/build.sh && ./gradlew --no-daemon assembleGithubDebug -PrequireNative" ;;
+  release) CMD="native/build.sh && ./gradlew --no-daemon assembleGithubRelease bundlePlayRelease -PrequireNative" ;;
   *) echo "usage: $0 [debug|release|native]" >&2; exit 2 ;;
 esac
 ENVS=()

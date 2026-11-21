@@ -72,7 +72,7 @@ jobs:
             echo "::error::app/src/main/kotlin/app/vitranslator/core/vi_translator_ffi.kt differs from the core's at native/core.ref: commit the copied file"; exit 1; }
 
       - name: Tests and the debug APK
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug -PrequireNative
+        run: ./gradlew --no-daemon testGithubDebugUnitTest assembleDebug lintGithubDebug lintPlayDebug -PrequireNative
 
       - uses: actions/upload-artifact@v4
         with:
