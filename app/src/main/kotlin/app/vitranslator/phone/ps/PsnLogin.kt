@@ -104,8 +104,9 @@ class PsnLoginActivity : Activity() {
         // (blocked in a WebView by default: "can't connect to the server" at Sign In)
         android.webkit.CookieManager.getInstance().setAcceptCookie(true)
         android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
-        // and as the phone's Chrome, not as a WebView (" wv", "Version/4.0"), which Sony's checks may refuse
-        web.settings.userAgentString = web.settings.userAgentString.replace("; wv)", ")").replace(Regex(" Version/[0-9.]+"), "")
+        // (the WebView's own identity is kept: Sony's bot check compares it with the browser's other
+        // signals. Its "Can't connect to the server" comes and goes: waiting a little on the page,
+        // then Sign In again, gets through)
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = caught(request.url)
 
