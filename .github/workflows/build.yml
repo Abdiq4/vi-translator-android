@@ -37,7 +37,7 @@ jobs:
 
       - name: Rust for the shared core
         run: |
-          rustup target add aarch64-linux-android x86_64-linux-android
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
           cargo install cargo-ndk --version 4.1.2 --locked
           sudo apt-get update && sudo apt-get install -y --no-install-recommends libclang-dev
           echo "VIT_CORE_DIR=$GITHUB_WORKSPACE/core-src" >> "$GITHUB_ENV"

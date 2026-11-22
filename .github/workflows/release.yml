@@ -82,7 +82,7 @@ jobs:
 
       - name: Rust for the shared core
         run: |
-          rustup target add aarch64-linux-android x86_64-linux-android
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
           cargo install cargo-ndk --version 4.1.2 --locked
           sudo apt-get update && sudo apt-get install -y --no-install-recommends libclang-dev
           echo "VIT_CORE_DIR=$GITHUB_WORKSPACE/core-src" >> "$GITHUB_ENV"
@@ -127,6 +127,8 @@ jobs:
           "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -n1)/apksigner verify --print-certs "$APK"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libchiaki-jni.so" || { echo "::error::the APK has no PS Remote Play library"; exit 1; }
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libvi_translator_ffi.so" || { echo "::error::the APK has no translation core"; exit 1; }
+          unzip -l "$APK" | grep -q "lib/armeabi-v7a/libchiaki-jni.so" || { echo "::error::the APK has no 32-bit libraries"; exit 1; }
+          unzip -l "$APK" | grep -q "lib/armeabi-v7a/libvi_translator_ffi.so" || { echo "::error::the APK has no 32-bit translation core"; exit 1; }
           AAB=app/build/outputs/bundle/playRelease/app-play-release.aab
           [ -f "$AAB" ] || { echo "::error::no app bundle"; ls -R app/build/outputs; exit 1; }
           jarsigner -verify "$AAB" | grep -q "^jar verified" || { echo "::error::the app bundle isn't signed"; exit 1; }

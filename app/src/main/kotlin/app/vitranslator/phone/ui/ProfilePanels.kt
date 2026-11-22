@@ -133,6 +133,9 @@ class AreasPanel(h: Host) : Panel(h) {
         add(k.h3(T("Read areas")))
         add(k.muted(T("Each area is read separately. Position and size are a percentage of the window, so they stay right if the window is resized.")))
         // the picture with the areas: drag a box to move it, its corner to resize
+        // (the same preview each time: out of the last refresh's stage first, or adding it again
+        // throws "The specified child already has a parent", as a header switch did here)
+        (preview.parent as? android.view.ViewGroup)?.removeView(preview)
         val stage = FrameLayout(h.act).apply {
             background = k.round(k.stage, 12, k.line)
             clipToOutline = true

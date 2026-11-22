@@ -19,8 +19,8 @@ val nativeLibs = rootProject.file("native/out/jniLibs")
 
 // -PrequireNative: fail if the native libraries are missing (CI and release builds)
 if (findProperty("requireNative") != null) {
-    for (lib in listOf("libchiaki-jni.so", "libvi_translator_ffi.so")) {
-        val so = nativeLibs.resolve("arm64-v8a/$lib")
+    for (abi in listOf("arm64-v8a", "armeabi-v7a")) for (lib in listOf("libchiaki-jni.so", "libvi_translator_ffi.so")) {
+        val so = nativeLibs.resolve("$abi/$lib")
         if (!so.exists()) throw GradleException("$so is missing: run native/build.sh first (VIT_CORE_DIR for the core)")
     }
 }
@@ -37,8 +37,9 @@ android {
         versionCode = appVersionCode
         versionName = appVersion
         ndk {
-            // phones (arm64) and the emulator (x86_64); native/build.sh builds the same ones
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            // phones (arm64, and armeabi-v7a for those whose system is 32-bit, like some Galaxy A
+            // models) and the emulator (x86_64); native/build.sh builds the same ones
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
     }
 

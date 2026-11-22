@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 NATIVE="$PWD"
-ABIS="${ABIS:-arm64-v8a x86_64}"
+ABIS="${ABIS:-arm64-v8a armeabi-v7a x86_64}"
 API=26
 NDK="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
 if [ -z "$NDK" ] && [ -n "${ANDROID_HOME:-}" ]; then
