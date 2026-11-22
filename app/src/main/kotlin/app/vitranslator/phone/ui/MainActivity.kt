@@ -103,6 +103,16 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != ASK_CAMERA) return
+        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            TranslateService.start(this, TranslateService.Source.CARD)
+        } else {
+            android.widget.Toast.makeText(this, T("The capture card needs the camera permission: Android lists capture cards as cameras."), android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString("mode", mode)
@@ -501,6 +511,11 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
         super.onActivityResult(requestCode, resultCode, data)
         panel?.result(requestCode, resultCode, data)
     }
+
+    companion object {
+        /** the camera permission, asked for when translating from a capture card starts */
+        const val ASK_CAMERA = 3
+    }
 }
 
 /** What the panels get from the screen around them. */
@@ -558,4 +573,5 @@ abstract class Panel(val h: Host) {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = k.dp(12) }
         }
     }
+
 }

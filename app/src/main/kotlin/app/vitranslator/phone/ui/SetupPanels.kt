@@ -36,8 +36,11 @@ class SourcePanel(h: Host) : Panel(h) {
         add(consoleChoice("ps5", "PlayStation 5", T("PS Remote Play: the phone streams the PS5's picture to read it (no sound). Works with the phone's screen off."), prefs.console == "ps5"))
         add(k.gap(8))
         add(consoleChoice("xbox", "Xbox", T("Microsoft's Remote Play player, in the app. Keep the phone's screen on while playing."), prefs.console == "xbox"))
+        add(k.gap(8))
+        add(consoleChoice("card", T("Capture card"), T("Any console: its HDMI goes into a USB capture card plugged into the phone. Works with the phone's screen off."), prefs.console == "card"))
         if (prefs.console == "ps5") ps5Setup()
         if (prefs.console == "xbox") xboxSetup()
+        if (prefs.console == "card") cardSetup()
         add(k.h3(T("Timing")))
         timing()
     }
@@ -46,7 +49,7 @@ class SourcePanel(h: Host) : Panel(h) {
 
     private fun consoleChoice(id: String, name: String, about: String, on: Boolean): View {
         val c = k.column(
-            k.row(k.icon(if (id == "ps5") R.drawable.ic_source else R.drawable.ic_tv, if (on) k.accentUi else k.muted, 20), k.grow(k.text(name, k.base + 0.5f, k.text, k.bold)),
+            k.row(k.icon(when (id) { "ps5" -> R.drawable.ic_source; "card" -> R.drawable.ic_camera; else -> R.drawable.ic_tv }, if (on) k.accentUi else k.muted, 20), k.grow(k.text(name, k.base + 0.5f, k.text, k.bold)),
                 k.icon(R.drawable.ic_check, if (on) k.accentUi else Color.TRANSPARENT, 18), gap = 10),
             k.muted(about, small = true).apply { setPadding(0, k.dp(4), 0, 0) },
         ).apply {
@@ -58,6 +61,29 @@ class SourcePanel(h: Host) : Panel(h) {
             }
         }
         return c
+    }
+
+    /**
+     * The capture card: how to plug it in, whether this phone can use one (Android lists USB
+     * cameras on the phones that support them), whether one is plugged in now, and the 4K picture.
+     */
+    private fun cardSetup() {
+        add(k.h3(T("Capture card")))
+        add(k.muted("1. " + T("Plug the console's HDMI into the card's HDMI in, and the card's HDMI out into the TV (if it has one).")))
+        add(k.muted("2. " + T("Plug the card's USB into the phone (USB-C, or with a USB-C adapter or hub).")))
+        add(k.muted("3. " + T("Press Start translating in Play.")))
+        val supported = app.vitranslator.phone.card.CardStream.supported(h.act)
+        val found = app.vitranslator.phone.card.CardStream.find(h.act) != null
+        val status = when {
+            !supported && !found -> T("This phone doesn't support USB cameras, so it can't use a capture card. Use PS5 or Xbox Remote Play instead.")
+            found -> T("A capture card is plugged in.")
+            else -> T("No capture card found. Plug it in, then check again.")
+        }
+        add(k.row(k.grow(k.text(status, k.base - 1f, if (found) k.text else k.muted, k.bold)),
+            k.button(T("Check again")) { refresh() }, gap = 10).apply { layoutParams = lp(10) })
+        add(k.check(T("4K picture"), Prefs(h.act).card4k) { Prefs(h.act).card4k = it })
+        add(k.muted(T("Off: 1080p, which is plenty for reading text and what most cards send. On: the card's largest picture, up to 4K (slower to read)."), small = true))
+        add(k.gap(14))
     }
 
     private fun ps5Setup() {

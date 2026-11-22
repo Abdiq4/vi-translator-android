@@ -130,5 +130,18 @@
  "Larger text": "تكبير النص",
  "Portrait": "عمودي",
  "Landscape": "أفقي",
- "Auto-rotate": "تدوير تلقائي"
+ "Auto-rotate": "تدوير تلقائي",
+ "Capture card": "بطاقة التقاط",
+ "Any console: its HDMI goes into a USB capture card plugged into the phone. Works with the phone's screen off.": "أي جهاز ألعاب: يدخل HDMI الخاص به إلى بطاقة التقاط USB موصولة بالجوال. يعمل وشاشة الجوال مطفأة.",
+ "Plug the console's HDMI into the card's HDMI in, and the card's HDMI out into the TV (if it has one).": "صِل HDMI جهاز الألعاب بمدخل HDMI في البطاقة، ومخرج HDMI في البطاقة بالتلفاز (إن وُجد).",
+ "Plug the card's USB into the phone (USB-C, or with a USB-C adapter or hub).": "صِل USB البطاقة بالجوال (USB-C، أو عبر محوّل أو موزّع USB-C).",
+ "Press Start translating in Play.": "اضغط «ابدأ الترجمة» في تبويب اللعب.",
+ "This phone doesn't support USB cameras, so it can't use a capture card. Use PS5 or Xbox Remote Play instead.": "هذا الجوال لا يدعم كاميرات USB، لذا لا يمكنه استخدام بطاقة التقاط. استخدم التشغيل عن بُعد لـ PS5 أو Xbox بدلاً منها.",
+ "A capture card is plugged in.": "بطاقة الالتقاط موصولة.",
+ "No capture card found. Plug it in, then check again.": "لم يُعثر على بطاقة التقاط. صِلها ثم تحقّق مجدداً.",
+ "Check again": "تحقّق مجدداً",
+ "4K picture": "صورة 4K",
+ "Off: 1080p, which is plenty for reading text and what most cards send. On: the card's largest picture, up to 4K (slower to read).": "عند الإيقاف: 1080p، وهي كافية لقراءة النص وهي ما ترسله معظم البطاقات. عند التشغيل: أكبر صورة للبطاقة حتى 4K (قراءتها أبطأ).",
+ "Keep the capture card plugged into the phone while playing (the screen can be off).": "أبقِ بطاقة الالتقاط موصولة بالجوال أثناء اللعب (يمكن إطفاء الشاشة).",
+ "The capture card needs the camera permission: Android lists capture cards as cameras.": "بطاقة الالتقاط تحتاج إذن الكاميرا: أندرويد يعرض بطاقات الالتقاط ككاميرات."
 }

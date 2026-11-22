@@ -132,6 +132,7 @@ class PlayPanel(h: Host) : Panel(h) {
         startNote.text = when {
             console == "xbox" -> T("Xbox: Microsoft's Remote Play player opens; keep the phone's screen on while playing.")
             console == "ps5" -> T("Keep VI Translator open while playing (with a PS5 the screen can be off).")
+            console == "card" -> T("Keep the capture card plugged into the phone while playing (the screen can be off).")
             else -> T("Choose your console in Source first.")
         }
         val rtl = langs.firstOrNull { it.code == cfg.str("target_lang", "ar") }?.rtl ?: true
@@ -189,6 +190,7 @@ class PlayPanel(h: Host) : Panel(h) {
         val source = when (console) {
             "ps5" -> if (ps != null) "PlayStation 5 · ${ps.nickname.ifEmpty { ps.host }}" else T("PlayStation 5 (not linked yet)")
             "xbox" -> "Xbox"
+            "card" -> T("Capture card")
             else -> T("Not chosen yet")
         }
         val sourceNote = when {
@@ -285,6 +287,12 @@ class PlayPanel(h: Host) : Panel(h) {
         when (Prefs(h.act).console) {
             "ps5" -> TranslateService.start(h.act, TranslateService.Source.PS5)
             "xbox" -> XboxActivity.open(h.act)
+            // (the card is a camera to Android: its permission first, then MainActivity starts it)
+            "card" -> if (h.act.checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                TranslateService.start(h.act, TranslateService.Source.CARD)
+            } else {
+                h.act.requestPermissions(arrayOf(android.Manifest.permission.CAMERA), MainActivity.ASK_CAMERA)
+            }
             else -> h.go("source")
         }
     }

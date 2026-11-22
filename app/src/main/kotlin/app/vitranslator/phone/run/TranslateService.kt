@@ -43,12 +43,13 @@ import java.util.concurrent.CopyOnWriteArrayList
  * says so, with Stop.
  */
 class TranslateService : Service(), PsStream.Listener {
-    enum class Source { PS5, XBOX }
+    enum class Source { PS5, XBOX, CARD }
 
     private val main = Handler(Looper.getMainLooper())
     private var wake: PowerManager.WakeLock? = null
     private var wifi: WifiManager.WifiLock? = null
     private var stream: PsStream? = null
+    private var card: app.vitranslator.phone.card.CardStream? = null
     private var source: Source? = null
 
     private var projection: MediaProjection? = null
@@ -77,13 +78,13 @@ class TranslateService : Service(), PsStream.Listener {
                 return START_NOT_STICKY
             }
         }
-        foreground(false)
         val s = Source.valueOf(intent?.getStringExtra(EXTRA_SOURCE) ?: Source.PS5.name)
+        foreground(false, camera = s == Source.CARD)
         if (source == null) begin(s)
         return START_NOT_STICKY
     }
 
-    private fun foreground(projecting: Boolean) {
+    private fun foreground(projecting: Boolean, camera: Boolean = source == Source.CARD) {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.notify_channel), NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
@@ -101,6 +102,8 @@ class TranslateService : Service(), PsStream.Listener {
         if (Build.VERSION.SDK_INT >= 29) {
             var type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
             if (projecting) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            // (the capture card is a camera: reading it with the screen off needs this type)
+            if (camera && Build.VERSION.SDK_INT >= 30) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
             startForeground(NOTIFICATION, n, type)
         } else {
             startForeground(NOTIFICATION, n)
@@ -140,7 +143,11 @@ class TranslateService : Service(), PsStream.Listener {
             App.reader = reader
             main.post {
                 if (source == null) return@post
-                if (s == Source.PS5) startPs(prefs) else Live.set(Live.State.READING, null)
+                when (s) {
+                    Source.PS5 -> startPs(prefs)
+                    Source.CARD -> startCard(prefs)
+                    Source.XBOX -> Live.set(Live.State.READING, null)
+                }
             }
         }.start()
     }
@@ -155,6 +162,22 @@ class TranslateService : Service(), PsStream.Listener {
         }
         val res = if (prefs.psResolution == 720) VideoResolutionPreset.RES_720P else VideoResolutionPreset.RES_1080P
         stream = PsStream(console, reader, this, File(cacheDir, "chiaki.log").path).also { it.start(res) }
+    }
+
+    private fun startCard(prefs: Prefs) {
+        val reader = App.reader ?: return
+        Live.set(Live.State.CONNECTING, null)
+        card = app.vitranslator.phone.card.CardStream(this, reader) { state, detail ->
+            main.post {
+                when (state) {
+                    app.vitranslator.phone.card.CardStream.State.STREAMING -> Live.set(Live.State.READING, null)
+                    else -> {
+                        Live.set(if (state == app.vitranslator.phone.card.CardStream.State.FAILED) Live.State.FAILED else Live.State.ENDED, detail)
+                        stopSelf()
+                    }
+                }
+            }
+        }.also { it.start(prefs.card4k) }
     }
 
     override fun onState(state: PsStream.State, detail: String?) {
@@ -240,6 +263,8 @@ class TranslateService : Service(), PsStream.Listener {
         stopProjection()
         stream?.stop()
         stream = null
+        card?.stop()
+        card = null
         source = null
         App.reader?.close()
         App.reader = null

@@ -45,6 +45,11 @@ class Prefs(ctx: Context) {
         get() = p.getInt("ps_resolution", 720)
         set(v) = p.edit().putInt("ps_resolution", v).apply()
 
+    /** the capture card's 4K picture (else 1080p, as the desktop's 4K switch) */
+    var card4k: Boolean
+        get() = p.getBoolean("card_4k", false)
+        set(v) = p.edit().putBoolean("card_4k", v).apply()
+
     // ---- the live translations full screen (LiveFull)
 
     /** the translations' text size there, in sp */

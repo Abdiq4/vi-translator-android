@@ -13,6 +13,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- a USB capture card, which the phone lists as an external camera -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <!-- updates from the app's releases: Android's installer asks to confirm each one -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -21,6 +24,9 @@
          too, and the player also shows in portrait) -->
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
+    <!-- (the camera permission would otherwise hide the app from devices without a camera) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.external" android:required="false" />
 
     <!-- usesCleartextTraffic: the TV page and the TV apps are plain HTTP on the home network -->
     <application
@@ -57,7 +63,7 @@
         <service
             android:name=".run.TranslateService"
             android:exported="false"
-            android:foregroundServiceType="specialUse|mediaProjection">
+            android:foregroundServiceType="specialUse|mediaProjection|camera">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps a PS Remote Play stream of the user's own console and the home-network page for the user's TV alive while the screen is off, to translate game subtitles live" />
