@@ -122,6 +122,9 @@ class AreasPanel(h: Host) : Panel(h) {
             selected = id
             drawList()
         }
+        // (its card then shows the custom position)
+        preview.madeCustom = { drawList() }
+        preview.editAreas = true
     }
 
     /** an area's percentage fields, refreshed when it is dragged */
