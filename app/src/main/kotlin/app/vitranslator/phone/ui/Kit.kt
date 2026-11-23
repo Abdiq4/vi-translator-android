@@ -407,7 +407,7 @@ class Kit(val ctx: Context, val dark: Boolean) {
         sw.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40))
         row.minimumHeight = dp(touch)
         row.setOnClickListener {
-            pick(T("Colour"), presets.map { it to it } + listOf("custom" to T("Custom…")), label.text.toString()) { c ->
+            pick(T("Color"), presets.map { it to it } + listOf("custom" to T("Custom…")), label.text.toString()) { c ->
                 if (c == "custom") {
                     val e = input(label.text.toString(), "#rrggbb", ltr = true) {}
                     var d: Dialog? = null

@@ -91,6 +91,35 @@ class Cfg(private val core: Core) {
     fun style(): JSONObject = c.optJSONObject("style") ?: JSONObject().also { c.put("style", it) }
     fun profileOpts(): JSONObject = c.optJSONObject("profile_opts") ?: JSONObject().also { c.put("profile_opts", it) }
 
+    /** The look "Over the game's text" (a built-in profile's choice in Game profile; the desktop's AS.coverLook). */
+    fun coverLook() = profileOpts().optJSONObject("more")?.optBoolean(COVER) == true
+
+    fun setCoverLook(on: Boolean) {
+        val o = profileOpts()
+        (o.optJSONObject("more") ?: JSONObject().also { o.put("more", it) }).put(COVER, on)
+        setShown("page", COVER, on)
+        touched("profile_opts")
+    }
+
+    /** How an area's translation comes on screen (the core's AreaFx; the desktop's AS.fxOf), kept by area id
+     *  for every profile, built-in ones too. */
+    fun fxOf(id: String): JSONObject {
+        val f = JSONObject().put("cover_min", true).put("cover_early", true).put("fade_ms", 150)
+        c.optJSONObject("area_fx")?.optJSONObject(id)?.let { o -> o.keys().forEach { f.put(it, o.get(it)) } }
+        f.put("fade_ms", f.optInt("fade_ms", 0).coerceIn(0, 2000))
+        if (f.opt("stack_up") !is Boolean) f.put("stack_up", id == "subtitles")
+        if (f.opt("ride") !is Boolean) f.put("ride", id == "subtitles" || id == "instructions")
+        if (f.opt("accent") !is Boolean) f.put("accent", id == "instructions")
+        if (f.opt("reviewed_only") !is Boolean) f.put("reviewed_only", id == "instructions")
+        return f
+    }
+
+    fun setFx(id: String, key: String, v: Any) {
+        val all = c.optJSONObject("area_fx") ?: JSONObject().also { c.put("area_fx", it) }
+        all.put(id, fxOf(id).put(key, v))
+        touched("area_fx")
+    }
+
     /** One of the player's profiles is in use: keep it equal to what is being edited. */
     private fun syncProfile() {
         val arr = c.optJSONArray("profiles") ?: return
@@ -164,6 +193,7 @@ class Cfg(private val core: Core) {
     }
 
     companion object {
+        const val COVER = "translation_cover"
         fun clone(o: JSONObject): JSONObject = JSONObject(o.toString())
         fun clone(a: JSONArray): JSONArray = JSONArray(a.toString())
 

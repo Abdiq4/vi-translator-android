@@ -280,8 +280,8 @@ class MainActivity : Activity(), Live.Watcher, CoreListener, Host {
         val strip = k.row(gap = 4).apply { setPadding(k.dp(10), k.dp(8), k.dp(10), k.dp(8)) }
         for ((id, label, icon) in tabList) {
             val on = id == tab
-            val lock = (id == "areas" || id == "pages") && cfg.locked()
-            val t = k.text(T(label) + if (lock) " 🔒" else "", k.base - 2f, if (on) k.accentUi else k.muted, k.bold).apply {
+            // (no lock on the tabs, as on the desktop: a built-in profile's note says so inside)
+            val t = k.text(T(label), k.base - 2f, if (on) k.accentUi else k.muted, k.bold).apply {
                 gravity = Gravity.CENTER
                 setCompoundDrawablesRelativeWithIntrinsicBounds(null, k.tinted(icon, if (on) k.accentUi else k.muted, 22), null, null)
                 compoundDrawablePadding = k.dp(4)

@@ -440,7 +440,7 @@ class SnapshotPanel(h: Host) : Panel(h) {
             )
             add(k.field(T("Model"), k.select(models, cfg.str("snap_gemini_model", models[0].first)) { cfg.put("snap_gemini_model", it) }))
         }
-        add(k.field(T("Behind the translation"), k.select(listOf("blur" to T("The picture, blurred"), "solid" to T("A solid colour")), if (cfg.str("snap_style") == "solid") "solid" else "blur") { cfg.put("snap_style", it) }))
+        add(k.field(T("Behind the translation"), k.select(listOf("blur" to T("The picture, blurred"), "solid" to T("A solid color")), if (cfg.str("snap_style") == "solid") "solid" else "blur") { cfg.put("snap_style", it) }))
         add(k.check(T("Keep every snapshot in the phone's Pictures, in VI Translator"), cfg.bool("snap_save", true)) { cfg.put("snap_save", it) })
         add(k.check(T("Allow snapshots from the home-network page"), cfg.bool("snap_lan", true)) { cfg.put("snap_lan", it) })
         add(k.muted(T("Phones and tablets showing the live translations get a snapshot button too."), small = true))

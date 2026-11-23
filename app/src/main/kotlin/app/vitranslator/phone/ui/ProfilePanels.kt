@@ -96,6 +96,19 @@ class ProfilePanel(h: Host) : Panel(h) {
             if (builtin) T("Built-in profiles get updates for the game automatically. A copy keeps your changes and stays yours.")
             else T("Your changes to read areas, text style and game pages are saved in this profile."), small = true,
         ).apply { setPadding(0, k.dp(10), 0, 0) })
+        // how translations look (built-in profiles: a profile of your own places each area's translation itself)
+        if (builtin) {
+            add(k.h3(T("How translations look")))
+            val cover = cfg.coverLook()
+            for ((on, label) in listOf(false to T("Above the game's text"), true to T("Over the game's text, on a black box that hides it"))) {
+                add(k.card(12, k.switch(label, cover == on) {
+                    if (it != (cover == on)) {
+                        cfg.setCoverLook(if (it) on else !on)
+                        h.rerender()
+                    }
+                }).apply { layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = k.dp(8) } })
+            }
+        }
     }
 }
 
@@ -285,7 +298,30 @@ class AreasPanel(h: Host) : Panel(h) {
             ).apply { layoutParams = lp(8) })
         }
         if (locked) for (v in ctl) disable(v)
+        fxForm(id, card)
         return card
+    }
+
+    /** How the area's translation comes on screen (the desktop's fxFields): the player's own, a built-in
+     *  profile's areas too. */
+    private fun fxForm(id: String, card: LinearLayout) {
+        val fx = cfg.fxOf(id)
+        val cover = cfg.coverLook()
+        fun set(key: String, v: Any) {
+            cfg.setFx(id, key, v)
+            preview.invalidate()
+        }
+        card.addView(k.label(T("Showing the translation")).apply { setPadding(0, k.dp(14), 0, 0) })
+        card.addView(k.check(T("Black box at least as big as the game's text"), fx.optBoolean("cover_min")) { set("cover_min", it) }.apply { if (!cover) disable(this) })
+        card.addView(k.check(T("Black box as soon as the text appears, before its translation"), fx.optBoolean("cover_early")) { set("cover_early", it) }.apply { if (!cover) disable(this) })
+        if (!cover) card.addView(k.muted(T("The black box is for the look \"Over the game's text\" (Game profile)."), small = true))
+        card.addView(k.check(T("Lines stack up from the bottom line: the lines above are read only when the bottom one is there"), fx.optBoolean("stack_up")) { set("stack_up", it) })
+        card.addView(k.check(T("Right above the stacked lines, moving up with them (with the subtitles and the bottom instructions as one block)"), fx.optBoolean("ride")) { set("ride", it) }.apply { if (cover) disable(this) })
+        if (cover) card.addView(k.muted(T("Moving above the lines is for the look \"Above the game's text\" (Game profile)."), small = true))
+        card.addView(k.check(T("A border in Vice City colours, to tell it apart"), fx.optBoolean("accent")) { set("accent", it) })
+        card.addView(k.check(T("Only reviewed translations: a reading that matches none isn't shown"), fx.optBoolean("reviewed_only")) { set("reviewed_only", it) })
+        val fades = listOf(0, 100, 150, 250, 400, 600)
+        card.addView(k.field(T("Fade in"), k.select(fades.map { "$it" to if (it == 0) T("Off") else "$it ms" }, "${fx.optInt("fade_ms")}") { set("fade_ms", it.toInt()) }))
     }
 
     private fun disable(v: View) {
@@ -333,13 +369,13 @@ class AreasPanel(h: Host) : Panel(h) {
         c(k.field(T("Text size (px at 1080p; scales with the game window)"), k.slider(10f, 96f, 1f, s.optDouble("font_size", 26.0).toFloat(), { "${it.toInt()} px" }) { set("font_size", it.toInt()) }))
         c(k.check(T("Bold"), s.optBoolean("bold")) { set("bold", it) })
         c(k.field(T("Line spacing"), k.slider(1f, 2.2f, 0.05f, s.optDouble("line_height", 1.5).toFloat(), { String.format(java.util.Locale.ROOT, "%.2f", it) }) { set("line_height", Math.round(it * 100) / 100.0) }))
-        c(k.field(T("Text colour"), k.colorPick(s.optString("text_color", "#ffffff")) { set("text_color", it) }))
-        c(k.check(T("Colour highlighted words like the game does"), s.optBoolean("keep_colors", true)) { set("keep_colors", it) })
-        c(k.field(T("Box colour"), k.colorPick(s.optString("bg_color", "#000000")) { set("bg_color", it) }))
+        c(k.field(T("Text color"), k.colorPick(s.optString("text_color", "#ffffff")) { set("text_color", it) }))
+        c(k.check(T("Color highlighted words like the game does"), s.optBoolean("keep_colors", true)) { set("keep_colors", it) })
+        c(k.field(T("Box color"), k.colorPick(s.optString("bg_color", "#000000")) { set("bg_color", it) }))
         c(k.field(T("Box opacity"), k.slider(0f, 1f, 0.05f, s.optDouble("bg_opacity", 0.65).toFloat(), { String.format(java.util.Locale.ROOT, "%.2f", it) }) { set("bg_opacity", Math.round(it * 100) / 100.0) }))
         c(k.field(T("Box padding"), k.slider(0f, 30f, 1f, s.optDouble("padding", 10.0).toFloat(), { it.toInt().toString() }) { set("padding", it.toInt()) }))
         c(k.field(T("Box corner roundness"), k.slider(0f, 30f, 1f, s.optDouble("radius", 10.0).toFloat(), { it.toInt().toString() }) { set("radius", it.toInt()) }))
-        c(k.field(T("Text outline colour"), k.colorPick(s.optString("outline_color", "#000000")) { set("outline_color", it) }))
+        c(k.field(T("Text outline color"), k.colorPick(s.optString("outline_color", "#000000")) { set("outline_color", it) }))
         c(k.field(T("Text outline width"), k.slider(0f, 6f, 0.5f, s.optDouble("outline_width", 0.0).toFloat(), { String.format(java.util.Locale.ROOT, "%.2f", it) }) { set("outline_width", it.toDouble()) }))
         c(k.check(T("Text shadow"), s.optBoolean("shadow")) { set("shadow", it) })
         if (a.has("style") && !a.isNull("style")) {
