@@ -104,8 +104,12 @@ class Cfg(private val core: Core) {
     /** How an area's translation comes on screen (the core's AreaFx; the desktop's AS.fxOf), kept by area id
      *  for every profile, built-in ones too. */
     fun fxOf(id: String): JSONObject {
-        val f = JSONObject().put("cover_min", true).put("cover_early", true).put("fade_ms", 150)
-        c.optJSONObject("area_fx")?.optJSONObject(id)?.let { o -> o.keys().forEach { f.put(it, o.get(it)) } }
+        // (as they apply — the core's fx_view: the player's own, else the game's default from the server; the
+        // fade-in off unless one sets it — then the player's own, changed here since)
+        val f = JSONObject().put("cover_min", true).put("cover_early", true).put("fade_ms", 0)
+        for (src in listOf(c.optJSONObject("fx_view"), c.optJSONObject("area_fx"))) {
+            src?.optJSONObject(id)?.let { o -> o.keys().forEach { if (!o.isNull(it)) f.put(it, o.get(it)) } }
+        }
         f.put("fade_ms", f.optInt("fade_ms", 0).coerceIn(0, 2000))
         if (f.opt("stack_up") !is Boolean) f.put("stack_up", id == "subtitles")
         if (f.opt("ride") !is Boolean) f.put("ride", id == "subtitles" || id == "instructions")
@@ -116,7 +120,8 @@ class Cfg(private val core: Core) {
 
     fun setFx(id: String, key: String, v: Any) {
         val all = c.optJSONObject("area_fx") ?: JSONObject().also { c.put("area_fx", it) }
-        all.put(id, fxOf(id).put(key, v))
+        // (only what the player changed is theirs: the fade-in they never touched follows the game's default)
+        all.put(id, (all.optJSONObject(id) ?: JSONObject()).put(key, v))
         touched("area_fx")
     }
 
