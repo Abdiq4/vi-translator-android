@@ -457,6 +457,14 @@ class PagesPanel(h: Host) : Panel(h) {
 
     private fun draw(box: LinearLayout, script: JSONObject?, game: String) {
         box.removeAllViews()
+        // (GTA VI's phone in the hand — its WhatUp chats translated on a second phone beside it: shown or not, the
+        // player's, whatever the profile)
+        if (game == "gta6") {
+            val card = k.card(12, k.switch(T("Phone translations"), cfg.bool("phone_text", true)) { cfg.put("phone_text", it) })
+            card.addView(k.muted(T("The phone's WhatUp chats, translated on a second phone beside it."), small = true))
+            card.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = k.dp(12) }
+            box.addView(card)
+        }
         val pages = script?.optJSONArray("pages")
         if (script == null || pages == null || pages.length() == 0) {
             box.addView(k.callout(
