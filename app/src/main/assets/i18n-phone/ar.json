@@ -143,5 +143,11 @@
  "4K picture": "صورة 4K",
  "Off: 1080p, which is plenty for reading text and what most cards send. On: the card's largest picture, up to 4K (slower to read).": "عند الإيقاف: 1080p، وهي كافية لقراءة النص وهي ما ترسله معظم البطاقات. عند التشغيل: أكبر صورة للبطاقة حتى 4K (قراءتها أبطأ).",
  "Keep the capture card plugged into the phone while playing (the screen can be off).": "أبقِ بطاقة الالتقاط موصولة بالجوال أثناء اللعب (يمكن إطفاء الشاشة).",
- "The capture card needs the camera permission: Android lists capture cards as cameras.": "بطاقة الالتقاط تحتاج إذن الكاميرا: أندرويد يعرض بطاقات الالتقاط ككاميرات."
+ "The capture card needs the camera permission: Android lists capture cards as cameras.": "بطاقة الالتقاط تحتاج إذن الكاميرا: أندرويد يعرض بطاقات الالتقاط ككاميرات.",
+ "Phone translations font": "خط ترجمة الجوال",
+ "Add a font from this phone": "إضافة خط من هذا الجوال",
+ "A .ttf or .otf file from this phone. The TVs get it from this phone too.": "ملف .ttf أو .otf من هذا الجوال. والتلفزيون يأخذه من الجوال نفسه.",
+ "Your fonts": "خطوطك",
+ "Font added: {name}": "تمت إضافة الخط: {name}",
+ "That isn't a .ttf or .otf font.": "هذا ليس خط .ttf أو .otf."
 }
