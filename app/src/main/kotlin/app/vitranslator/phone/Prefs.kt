@@ -11,6 +11,11 @@ class Prefs(ctx: Context) {
         get() = p.getString("console", "") ?: ""
         set(v) = p.edit().putString("console", v).apply()
 
+    /** true once the fast timing was set (once only: after that the player's own timing is kept) */
+    var fastApplied: Boolean
+        get() = p.getBoolean("fast_applied_v1", false)
+        set(v) = p.edit().putBoolean("fast_applied_v1", v).apply()
+
     var game: String
         get() = p.getString("game", "gta6") ?: "gta6"
         set(v) = p.edit().putString("game", v).apply()

@@ -10,6 +10,8 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Crashes.install(this)
+        // (the fonts the player added: the core serves them to the TVs from this folder)
+        app.vitranslator.phone.ui.Fonts.userDir = filesDir.resolve("vit").resolve("fonts")
         core = Cores.create(this, MlKitRecognizer())
         // The TV page is served while the app runs (as the PC app does while open): a connected TV
         // finds the phone at once, and shows the translations when translating starts.
