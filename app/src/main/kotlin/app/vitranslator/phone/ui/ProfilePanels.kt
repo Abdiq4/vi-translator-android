@@ -1,6 +1,11 @@
 package app.vitranslator.phone.ui
 
+import android.app.Activity
+import android.content.Intent
 import android.graphics.Typeface
+import android.net.Uri
+import android.provider.OpenableColumns
+import android.widget.Toast
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -20,6 +25,69 @@ object Fonts {
         }
     }
 
+    /** Where the fonts the player added are kept (the core serves them to the TVs from here; set by App). */
+    @Volatile
+    var userDir: java.io.File? = null
+
+    /** The fonts the player added from the phone: their family names (the files' names). */
+    fun userFonts(): List<String> =
+        userDir?.listFiles()?.filter { it.isFile && it.extension.lowercase() in setOf("ttf", "otf") }?.map { it.nameWithoutExtension }?.sorted() ?: emptyList()
+
+    private val userFaces = HashMap<String, Typeface>()
+
+    private fun userFace(name: String): Typeface? {
+        val f = userDir?.listFiles()?.firstOrNull { it.isFile && it.nameWithoutExtension == name && it.extension.lowercase() in setOf("ttf", "otf") } ?: return null
+        return userFaces.getOrPut(name) {
+            try {
+                Typeface.createFromFile(f)
+            } catch (e: RuntimeException) {
+                return null
+            }
+        }
+    }
+
+    /** Copy a font the player picked into [userDir] (TrueType or OpenType). The family name, or null when it isn't a font. */
+    fun addUserFont(ctx: android.content.Context, uri: Uri): String? {
+        val dir = userDir ?: return null
+        var shown = "font"
+        ctx.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) shown = c.getString(0) ?: shown
+        }
+        val ext = shown.substringAfterLast('.', "").lowercase()
+        if (ext != "ttf" && ext != "otf") return null
+        val stem = shown.substringBeforeLast('.').replace(Regex("[^A-Za-z0-9._-]"), "-").trim('-', '.').take(40).ifEmpty { "MyFont" }
+        dir.mkdirs()
+        val out = java.io.File(dir, "$stem.$ext")
+        val tmp = java.io.File(dir, "$stem.tmp")
+        ctx.contentResolver.openInputStream(uri)?.use { input ->
+            tmp.outputStream().use { o ->
+                val buf = ByteArray(64 * 1024)
+                var total = 0L
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    total += n
+                    if (total > 20L * 1024 * 1024) {
+                        tmp.delete()
+                        return null
+                    }
+                    o.write(buf, 0, n)
+                }
+            }
+        } ?: return null
+        // (a font starts with 0x00010000, "true" or "OTTO")
+        val head = tmp.inputStream().use { i -> ByteArray(4).also { i.read(it) } }
+        val ok = head.contentEquals(byteArrayOf(0, 1, 0, 0)) || String(head, Charsets.ISO_8859_1) in setOf("true", "OTTO")
+        if (!ok) {
+            tmp.delete()
+            return null
+        }
+        out.delete()
+        tmp.renameTo(out)
+        userFaces.remove(stem)
+        return stem
+    }
+
     val BUNDLED = listOf(
         "Lalezar" to "heavy display, great for game titles",
         "Changa" to "bold geometric",
@@ -35,6 +103,12 @@ object Fonts {
         for ((n, note) in BUNDLED) o += n to "$n — ${T(note)}"
         // (any other font the core bundles)
         for (n in core) if (BUNDLED.none { it.first == n }) o += n to n
+        // (the fonts the player added from the phone)
+        val mine = userFonts()
+        if (mine.isNotEmpty()) {
+            o += (Kit.GROUP + "mine") to T("Your fonts")
+            for (n in mine) o += n to n
+        }
         return o
     }
 
@@ -44,7 +118,7 @@ object Fonts {
         name.startsWith("Cairo") -> k.font("Cairo.ttf")
         name.startsWith("Tajawal") -> k.font("Tajawal-Regular.ttf")
         name.startsWith("Noto Sans Arabic") -> k.font("NotoSansArabic.ttf")
-        else -> null
+        else -> userFace(name)
     }
 }
 
@@ -504,12 +578,47 @@ class PagesPanel(h: Host) : Panel(h) {
             o.put("text_font", it)
             cfg.touched("profile_opts")
         }
-        val card = k.card(12, k.field(T("Title font"), title), k.field(T("Reason and button font"), text))
-        if (cfg.locked()) for (v in listOf(title, text)) {
+        val phone = k.select(Fonts.options(null), o.optString("phone_font", "Noto Sans Arabic Medium"), T("Phone translations font"), { Fonts.face(k, it) }) {
+            o.put("phone_font", it)
+            cfg.touched("profile_opts")
+        }
+        val add = k.button(T("Add a font from this phone")) { pickFont() }.apply { layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = k.dp(10) } }
+        val card = k.card(12, k.field(T("Title font"), title), k.field(T("Reason and button font"), text), k.field(T("Phone translations font"), phone), add)
+        card.addView(k.muted(T("A .ttf or .otf file from this phone. The TVs get it from this phone too."), small = true))
+        if (cfg.locked()) for (v in listOf(title, text, phone)) {
             v.isEnabled = false
             v.alpha = 0.5f
         }
         card.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = k.dp(10) }
         box.addView(card)
+    }
+
+    private fun pickFont() {
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("font/ttf", "font/otf", "font/sfnt", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
+        }
+        h.act.startActivityForResult(i, REQ_FONT)
+    }
+
+    override fun result(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != REQ_FONT || resultCode != Activity.RESULT_OK) return
+        val uri = data?.data ?: return
+        h.io {
+            val name = try {
+                Fonts.addUserFont(h.act, uri)
+            } catch (e: Exception) {
+                null
+            }
+            h.ui {
+                Toast.makeText(h.act, if (name != null) T("Font added: {name}", "name" to name) else T("That isn't a .ttf or .otf font."), Toast.LENGTH_LONG).show()
+                if (name != null) refresh()
+            }
+        }
+    }
+
+    companion object {
+        private const val REQ_FONT = 7421
     }
 }
