@@ -129,6 +129,14 @@ class TranslateService : Service(), PsStream.Listener {
                 val profile = (0 until (c.optJSONArray("builtins")?.length() ?: 0)).map { c.getJSONArray("builtins").getJSONObject(it) } +
                     (0 until (c.optJSONArray("profiles")?.length() ?: 0)).map { c.getJSONArray("profiles").getJSONObject(it) }
                 val game = profile.firstOrNull { it.optString("id") == c.optString("profile") }?.optString("game")?.ifEmpty { null } ?: "gta6"
+                // fast mode, once: the quickest timing (the player can change it afterwards in Setup)
+                if (!prefs.fastApplied) {
+                    core.updateConfig(
+                        org.json.JSONObject().put("timing_custom", true).put("interval_ms", 100).put("stable_ms", 50)
+                            .put("clear_after_ms", 600).put("capture_fps", 20).put("phone_text", true).toString(),
+                    )
+                    prefs.fastApplied = true
+                }
                 core.prepare(game, c.optString("target_lang").ifEmpty { "ar" })
                 core.startServer()
             } catch (e: Exception) {
