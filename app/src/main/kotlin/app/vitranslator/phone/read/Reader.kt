@@ -69,11 +69,13 @@ class Reader(private val core: Core) {
                 frameSize = "${snap.width}x${snap.height}"
                 val rgba = snap.rgba()
                 last = Triple(rgba, snap.width, snap.height)
-                preview?.let { show -> small(rgba, snap.width, snap.height)?.let(show) }
                 val wait = core.processFrame(rgba, snap.width, snap.height)
                 lastMs = SystemClock.elapsedRealtime() - start
-                nextAt = start + wait.coerceIn(0, 2000)
+                // (fast mode: never wait more than MAX_WAIT_MS between readings, whatever the core asks)
+                nextAt = start + wait.coerceIn(0, MAX_WAIT_MS)
                 read++
+                // (the preview after the reading, so it never delays the translation)
+                preview?.let { show -> small(rgba, snap.width, snap.height)?.let(show) }
             } catch (e: Exception) {
                 Log.w(TAG, "reading failed", e)
                 nextAt = SystemClock.elapsedRealtime() + 1000
@@ -102,6 +104,9 @@ class Reader(private val core: Core) {
 
     companion object {
         private const val TAG = "Reader"
+
+        /** The longest pause between two readings (the core's own pace is used when it is shorter). */
+        private const val MAX_WAIT_MS = 80L
 
         /** The frame at most 960 pixels wide, for the preview. */
         fun small(rgba: ByteArray, w: Int, h: Int): Bitmap? = try {

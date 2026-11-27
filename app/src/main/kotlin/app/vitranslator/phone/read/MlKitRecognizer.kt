@@ -16,6 +16,19 @@ import java.util.concurrent.TimeUnit
 class MlKitRecognizer : Recognizer {
     private val client = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
+    init {
+        // (fast mode: the model is loaded now, in the background, so the first subtitle isn't late)
+        Thread {
+            try {
+                val blank = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+                Tasks.await(client.process(InputImage.fromBitmap(blank, 0)), 20, TimeUnit.SECONDS)
+                blank.recycle()
+            } catch (e: Exception) {
+                Log.w("MlKitRecognizer", "warm-up failed: $e")
+            }
+        }.apply { isDaemon = true }.start()
+    }
+
     override fun recognize(bgra: ByteArray, width: Int, height: Int): List<Word> {
         if (width <= 0 || height <= 0 || bgra.size < width * height * 4) return emptyList()
         // (grey: the channel order doesn't matter)

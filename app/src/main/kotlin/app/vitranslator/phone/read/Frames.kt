@@ -86,15 +86,27 @@ class YuvSnapshot(
         val w = width
         val h = height
         val out = ByteArray(w * h * 4)
-        var i = 0
-        for (row in pic.top until pic.top + h) {
-            val yBase = row * yRow
-            val cBase = (row shr 1) * cRow
-            for (col in pic.left until pic.left + w) {
-                val ci = cBase + (col shr 1) * cPix
-                pixel(out, i, y[yBase + col * yPix].toInt() and 255, u[ci].toInt() and 255, v[ci].toInt() and 255)
-                i += 4
+        fun rows(from: Int, to: Int) {
+            for (r in from until to) {
+                val row = pic.top + r
+                val yBase = row * yRow
+                val cBase = (row shr 1) * cRow
+                var i = r * w * 4
+                for (col in pic.left until pic.left + w) {
+                    val ci = cBase + (col shr 1) * cPix
+                    pixel(out, i, y[yBase + col * yPix].toInt() and 255, u[ci].toInt() and 255, v[ci].toInt() and 255)
+                    i += 4
+                }
             }
+        }
+        // (fast mode: the rows are converted on several threads at once)
+        val n = Runtime.getRuntime().availableProcessors().coerceIn(1, 4)
+        if (n == 1 || h < 64) {
+            rows(0, h)
+        } else {
+            val per = (h + n - 1) / n
+            val ts = (0 until n).map { k -> Thread { rows(k * per, minOf(h, (k + 1) * per)) }.also { it.start() } }
+            ts.forEach { it.join() }
         }
         return out
     }
